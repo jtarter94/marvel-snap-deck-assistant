@@ -61,7 +61,7 @@ uses; `snap-assistant sync` reports any that are missing.
   locations.
 
 ## Front row and back row
-`status: from-card-text` · `aliases: front row, back row, front-row, back-row, in front of, behind, full front row`
+`status: established` · `aliases: front row, back row, front-row, back-row, in front of, behind, full front row` · `verified: player, 2026-11-11`
 
 - A player's side of each location has 4 slots arranged as a front row and a
   back row. Card text refers to "front-row cards", "back-row cards", and "the
@@ -69,7 +69,7 @@ uses; `snap-assistant sync` reports any that are missing.
   back-row cards here"; Cosmic Ghost Rider: "Remove the text from front-row
   enemy cards here"; Prodigy: "If this is in the back row, copy the text of
   the card in front of it").
-- Assumption to verify: the first two cards placed at a location fill the
+- The first two cards placed at a location fill the
   front row and the next two the back row, with each back-row slot behind a
   front-row slot.
 
@@ -169,13 +169,13 @@ uses; `snap-assistant sync` reports any that are missing.
 - Two copies of an Ongoing effect (e.g. a Mystique copying it) both apply.
 
 ## Activate
-`status: established` · `aliases: activated ability, activation`
+`status: established` · `aliases: activated ability, activation` · `verified: player, 2026-11-11`
 
 - An ability you choose to use once per game by tapping the card while it's in
   play. It doesn't cost Energy.
 - It resolves at the end of the turn alongside revealing cards, in the same
   priority order.
-- Assumption to verify: it can't be used until the turn after the card is
+- It can't be used until the turn after the card is
   revealed (cards reveal at the end of the turn they're played).
 
 ## End of Turn
@@ -250,12 +250,12 @@ uses; `snap-assistant sync` reports any that are missing.
 - The Zombie Horde is a created card; cards like Zombie Giant-Man scale with it.
 
 ## Quickdraw
-`status: from-card-text` · `aliases: quickdraw, quick draw`
+`status: established` · `aliases: quickdraw, quick draw` · `verified: player, 2026-11-11`
 
 - An extra effect that replaces or adds to the card's normal effect under a
   condition (Red Hulk Fractured Frontier: "On Reveal: -1 Power for each enemy
   card here. Quickdraw: +1 Power instead").
-- Assumption to verify: the Quickdraw condition is playing the card on the
+- The Quickdraw condition is playing the card on the
   same turn you drew it. Thanos Fractured Frontier gives all your cards a
   Quickdraw at Game Start.
 
