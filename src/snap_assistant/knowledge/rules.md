@@ -257,6 +257,11 @@ uses; `snap-assistant sync` reports any that are missing.
   with +5 Power. (0/4)". When the counter is complete the reward happens.
 - Progress counts while the card is in your **hand or deck**, not only in
   play, so an Objective can be partly or fully done before you play the card.
+- A reward completed while the card is in hand or deck waits: it goes off
+  only after you play the card, at the end of the turn you play it, and
+  "here" is where the card was played. E.g. Stryfe with his Objective done in
+  hand, played on turn 5, uses his On Reveal at the end of turn 5 (verified:
+  player, 2026-11-11).
 - An Objective completes once per game (player's understanding; whether a
   revived or copied card can complete it again is unconfirmed).
 - When an Objective reward picks "the highest-Cost" card and several are tied,
