@@ -114,19 +114,25 @@ uses; `snap-assistant sync` reports any that are missing.
 - Power gained in hand or deck stays with the card when it's played.
 
 ## Skills
-`status: from-card-text` · `aliases: skill, skills, skill card, spell`
+`status: established` · `aliases: skill, skills, skill card, spell, banished after use` · `verified: player, 2026-11-11`
 
 - Skills are cards with a Cost and an ability but no character (they show 0
   Power), e.g. The Inversion, Web Sling, Fastball Special, Astral Projection.
   Most of their text is an On Reveal.
+- A Skill is **banished once it's played**: it resolves and disappears. It
+  doesn't stay at the location, so it doesn't take one of the 4 slots, add
+  Power, or count as a card there afterwards. Because banishing isn't
+  destroying or discarding, it doesn't feed destroy/discard counters (Knull,
+  Death) or trigger "When Destroyed" effects.
 - Some Skills are **collectible** (they belong to a collection series and go
   in decks like characters); others are only **generated** by cards (Merlin's
   Incantations, Vampire Killmonger's Vampiric Spear) or by game modes.
 - Text that says "character" doesn't include Skills; text that says "card"
   does (e.g. Polymorph transforms a character; Quinjet's "created cards"
   includes generated Skills).
-- Assumption to verify: whether a Skill stays at its location after revealing
-  (taking one of the 4 slots and counting as a card there) or leaves play.
+- Deck-building consequence: Skills are effects, not board presence. They're
+  good for filling a location's slots without spending them, and poor in
+  decks that want many cards on the board or count cards at a location.
 
 ## Created cards
 `status: established` · `aliases: created, generated, tokens, add to hand, copies`
@@ -315,6 +321,7 @@ uses; `snap-assistant sync` reports any that are missing.
 
 - Removes a card from the game without destroying or discarding it, so
   "destroyed"/"discarded" counters and triggers don't see it.
+- Every Skill is banished after it's played (see Skills).
 
 ## Revive, Resurrect and Regenerate
 `status: from-card-text` · `aliases: revive, resurrect, regenerate, return, comes back`

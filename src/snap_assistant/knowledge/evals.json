@@ -5,88 +5,175 @@
       "id": "cosmo-wong",
       "question": "Cosmo is at a location and I play Wong there, then a Black Panther. Does Black Panther double twice?",
       "expected": "No. Cosmo's Ongoing stops On Reveal abilities happening at that location, so Black Panther's On Reveal doesn't happen at all; Wong only repeats On Reveals that happen.",
-      "assumes": {"Cosmo": "On Reveal abilities won't happen here", "Wong": "Your On Reveal abilities here repeat", "Black Panther": "Double this card's Power"},
-      "rules": ["On Reveal", "Ongoing"]
+      "assumes": {
+        "Cosmo": "On Reveal abilities won't happen here",
+        "Wong": "Your On Reveal abilities here repeat",
+        "Black Panther": "Double this card's Power"
+      },
+      "rules": [
+        "On Reveal",
+        "Ongoing"
+      ]
     },
     {
       "id": "enchantress-iron-man",
       "question": "My Iron Man is doubling my Power at a location. My opponent reveals Enchantress there afterwards. What happens?",
       "expected": "Enchantress removes the abilities of all Ongoing cards at her location, so Iron Man stops doubling your Power there for the rest of the game (he keeps his own 0 Power).",
-      "assumes": {"Enchantress": "Remove the abilities from all Ongoing cards here", "Iron Man": "Your total Power is doubled here"},
-      "rules": ["Ongoing", "Copy and remove text"]
+      "assumes": {
+        "Enchantress": "Remove the abilities from all Ongoing cards here",
+        "Iron Man": "Your total Power is doubled here"
+      },
+      "rules": [
+        "Ongoing",
+        "Copy and remove text"
+      ]
     },
     {
       "id": "knull-counts-enemies",
       "question": "Does Knull count my opponent's destroyed cards too?",
       "expected": "Yes. Knull has the combined Power of all cards destroyed this game, yours and your opponent's.",
-      "assumes": {"Knull": "all cards destroyed this game"},
-      "rules": ["When Destroyed"]
+      "assumes": {
+        "Knull": "all cards destroyed this game"
+      },
+      "rules": [
+        "When Destroyed"
+      ]
     },
     {
       "id": "death-cost",
       "question": "Three cards have been destroyed this game. What does Death cost?",
       "expected": "5. Death costs 8 and costs 1 less for each card destroyed this game.",
-      "assumes": {"Death": "Costs 1 less for each card destroyed this game"},
-      "rules": ["Energy"],
-      "check_stats": {"Death": {"cost": 8}}
+      "assumes": {
+        "Death": "Costs 1 less for each card destroyed this game"
+      },
+      "rules": [
+        "Energy"
+      ],
+      "check_stats": {
+        "Death": {
+          "cost": 8
+        }
+      }
     },
     {
       "id": "shadow-king-reset",
       "question": "My Black Panther revealed and doubled to 10 Power. My opponent then reveals Shadow King at that location. What is Black Panther's Power?",
       "expected": "5, its original Power. Shadow King resets all cards at its location to their original Power.",
-      "assumes": {"Shadow King": "Reset all cards here to their original Power", "Black Panther": "Double this card's Power"},
-      "rules": ["Power", "Revealing and priority"],
-      "check_stats": {"Black Panther": {"power": 5}}
+      "assumes": {
+        "Shadow King": "Reset all cards here to their original Power",
+        "Black Panther": "Double this card's Power"
+      },
+      "rules": [
+        "Power",
+        "Revealing and priority"
+      ],
+      "check_stats": {
+        "Black Panther": {
+          "power": 5
+        }
+      }
     },
     {
       "id": "wolverine-discarded",
       "question": "Blade discards Wolverine from my hand. What happens?",
       "expected": "Wolverine regenerates at a random location with +2 Power (5 Power), because his ability triggers when discarded or destroyed. Being put into play this way isn't playing him, so nothing else reveals.",
-      "assumes": {"Blade": "Discard the rightmost card from your hand", "Wolverine": "When Discarded or Destroyed: Regenerate this with +2 Power at a random location"},
-      "rules": ["When Discarded or Destroyed", "Revive, Resurrect and Regenerate"],
-      "check_stats": {"Wolverine": {"power": 3}}
+      "assumes": {
+        "Blade": "Discard the rightmost card from your hand",
+        "Wolverine": "When Discarded or Destroyed: Regenerate this with +2 Power at a random location"
+      },
+      "rules": [
+        "When Discarded or Destroyed",
+        "Revive, Resurrect and Regenerate"
+      ],
+      "check_stats": {
+        "Wolverine": {
+          "power": 3
+        }
+      }
     },
     {
       "id": "mystique-on-reveal",
       "question": "I play Black Panther, then Mystique. Does Mystique double her Power?",
       "expected": "No. Mystique only copies the text of the last card you played if it has an Ongoing; Black Panther's ability is an On Reveal.",
-      "assumes": {"Mystique": "If the last card you played has an Ongoing, copy its text"},
-      "rules": ["On Reveal", "Ongoing", "Copy and remove text"]
+      "assumes": {
+        "Mystique": "If the last card you played has an Ongoing, copy its text"
+      },
+      "rules": [
+        "On Reveal",
+        "Ongoing",
+        "Copy and remove text"
+      ]
     },
     {
       "id": "spear-in-deck",
       "question": "Can I put Vampiric Spear in my deck?",
       "expected": "No. It's a Skill that Vampire Killmonger creates (End of Turn, if you spent all your Energy). It has no collection series, so unlike collectible Skills such as Web Sling it can't go in a deck.",
-      "assumes": {"Vampire Killmonger": "get a Vampiric Spear"},
-      "rules": ["Deck and collection", "Created cards"]
+      "assumes": {
+        "Vampire Killmonger": "get a Vampiric Spear"
+      },
+      "rules": [
+        "Deck and collection",
+        "Created cards"
+      ]
     },
     {
       "id": "queen-of-chaos-pool",
       "question": "Can Scarlet Witch Queen of Chaos give me Polymorph?",
       "expected": "Yes, as far as the data shows: she adds a random skill each Start of Turn (costing 0 that turn), and Polymorph is a Skill (one of Merlin's Incantations), so it's in the All Skills pool. The pool link is inferred from her text, so it's worth confirming in-game.",
-      "assumes": {"Scarlet Witch Queen of Chaos": "random skill"},
-      "rules": ["Start of Turn", "Created cards"]
+      "assumes": {
+        "Scarlet Witch Queen of Chaos": "random skill"
+      },
+      "rules": [
+        "Start of Turn",
+        "Created cards"
+      ]
     },
     {
       "id": "priority",
       "question": "At the end of turn 4 I'm winning two locations and my opponent is winning one. Whose cards reveal first?",
       "expected": "Yours. The player winning more locations reveals first.",
       "assumes": {},
-      "rules": ["Revealing and priority"]
+      "rules": [
+        "Revealing and priority"
+      ]
     },
     {
       "id": "nightcrawler-move-reveal",
       "question": "If I move Nightcrawler to a location with Cosmo, does anything get blocked?",
       "expected": "No. Nightcrawler has no On Reveal (he's just Moveable once), and moving a card never triggers On Reveal anyway.",
-      "assumes": {"Nightcrawler": "Moveable once", "Cosmo": "On Reveal abilities won't happen here"},
-      "rules": ["Moveable", "On Reveal"]
+      "assumes": {
+        "Nightcrawler": "Moveable once",
+        "Cosmo": "On Reveal abilities won't happen here"
+      },
+      "rules": [
+        "Moveable",
+        "On Reveal"
+      ]
     },
     {
       "id": "professor-x-lock",
       "question": "Professor X is at a location. Can my opponent's Shang-Chi-style destroy effect remove a card there, and can I play new cards there?",
       "expected": "Neither: with Professor X's Ongoing, moving is the only way to add or remove a character from that location, so cards can't be played there or destroyed out of it while he keeps his text.",
-      "assumes": {"Professor X": "Moving is the only way to add or remove a character from here"},
-      "rules": ["Ongoing", "Moveable"]
+      "assumes": {
+        "Professor X": "Moving is the only way to add or remove a character from here"
+      },
+      "rules": [
+        "Ongoing",
+        "Moveable"
+      ]
+    },
+    {
+      "id": "skill-banished",
+      "question": "I play The Inversion at a location where I already have 3 cards. How many of my cards are at that location afterwards, and does Knull gain anything from it?",
+      "expected": "Still 3. The Inversion is a Skill, so it's banished once it's played: it resolves its On Reveal and disappears without taking a slot. Banishing isn't destroying, so Knull gains nothing from it.",
+      "assumes": {
+        "The Inversion": "Invert the Power",
+        "Knull": "all cards destroyed this game"
+      },
+      "rules": [
+        "Skills",
+        "Banish"
+      ]
     }
   ]
 }
