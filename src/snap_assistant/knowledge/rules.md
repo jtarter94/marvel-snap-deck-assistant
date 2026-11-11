@@ -168,6 +168,11 @@ uses; `snap-assistant sync` reports any that are missing.
   comes back into play by being **revived, resurrected or regenerated**
   (verified by the player; see Revive, Resurrect and Regenerate). Moving a
   card doesn't trigger it.
+- A card **put into play from hand by an effect** (Dragon Lord: "Put a card
+  from your hand here"; Eson: "Put a created card from your hand here") also
+  triggers its On Reveal, but it doesn't count as **played**: it doesn't
+  count for "per card played" discounts (The Grand Design) or "play N cards"
+  Objectives (Stryfe) (verified: player, 2026-11-11).
 - Can be repeated by effects (Wong: "Your On Reveal abilities here repeat";
   Odin repeats the On Reveals of your other cards at his location), copied, or
   prevented (Cosmo: "On Reveal abilities won't happen here").
