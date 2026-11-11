@@ -43,7 +43,8 @@ class CardPool:
             store.close()
         return cls(
             [Card(name=r["name"], cost=r["cost"] or 0, power=r["power"] or 0, ability=r["text"] or "",
-                  tags=frozenset(json.loads(r["tags"])), def_id=r["def_id"]) for r in rows],
+                  tags=frozenset(json.loads(r["tags"])), def_id=r["def_id"],
+                  release_date=r["release_date"]) for r in rows],
             source=f"database {path}",
         )
 

@@ -15,7 +15,8 @@ snap-assistant sync                     # pull the latest cards & locations
 snap-assistant analyze examples/destroy.txt
 snap-assistant suggest examples/destroy.txt -n 5
 snap-assistant cards --tag move
-snap-assistant show knull               # card + change history
+snap-assistant show knull               # card, release date, created cards, history
+snap-assistant cards --newest 5
 snap-assistant locations --search energy
 pytest
 ```
@@ -50,6 +51,15 @@ Both are matched on the game's internal id (`CardDefId`). Per card and field:
 - A card is **released** once either source says so.
 - A source that errors, returns too few records, or shrinks by more than 10%
   since the last good run is ignored for that run; if both fail nothing changes.
+
+Each card also gets a **release date**: the earlier of marvelsnap.pro's pool
+start date and the Zone's first art date (the pool date moves when a card
+changes Series). `snap-assistant cards --newest 10` lists the latest releases.
+
+Cards that create others (Vampire Killmonger → Vampiric Spear, Ultron →
+Drones, Nico Minoru → her spells) are linked: `show` lists **Creates** and
+**Created by**. Those created cards are stored with their text but aren't
+deck-buildable.
 
 Only released, collectible **characters** go in the deck-building pool: tokens,
 game-mode Skills/Augments and game-mode versions (Champions, "Hulk - Avengers")

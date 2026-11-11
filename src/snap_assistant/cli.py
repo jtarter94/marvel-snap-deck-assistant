@@ -88,6 +88,13 @@ def cmd_cards(args):
     if args.search:
         q = args.search.lower()
         cards = [c for c in cards if q in c.name.lower() or q in c.ability.lower()]
+    if args.newest:
+        dated = sorted((c for c in cards if c.release_date), key=lambda c: c.release_date, reverse=True)
+        if not dated:
+            raise SystemExit("No release dates available. Run `snap-assistant sync` first.")
+        for c in dated[:args.newest]:
+            print(f"{c.release_date}  [{c.cost}/{c.power}] {c.name}: {c.ability}")
+        return
     for c in sorted(cards, key=lambda c: (c.cost, c.name)):
         print(f"[{c.cost}/{c.power}] {c.name}: {c.ability}")
 
@@ -123,11 +130,25 @@ def cmd_show(args):
         flags = [row["status"], "released" if row["released"] else "unreleased"]
         if row["is_token"]:
             flags.append("token")
+        if extra.get("card_type") not in (None, "Character"):
+            flags.append(f"{extra['card_type']} (game mode)" if not extra.get("created_by") else extra["card_type"])
+        elif args.kind == "card" and extra.get("collectible") is False:
+            flags.append("not collectible")
         print(f"  Status: {', '.join(flags)};  sources: {', '.join(json.loads(row['sources']))}")
         if args.kind == "card":
             print(f"  Tags: {', '.join(json.loads(row['tags'])) or '-'}")
+        if row["release_date"]:
+            when = "Released" if row["released"] else "Scheduled"
+            note = {True: "", False: " (sources differ; earliest shown)", None: ""}[extra.get("release_date_agreed")]
+            print(f"  {when}: {row['release_date']}{note}")
         if extra.get("patch"):
             print(f"  Last changed in game patch {extra['patch']}")
+        for label, key in (("Creates", "creates"), ("Created by", "created_by"), ("Related", "related_cards")):
+            if extra.get(key):
+                found = [(store.name_of("card", i), i) for i in extra[key]]
+                repeated = {n for n, _ in found if [m for m, _ in found].count(n) > 1 or n == row["name"]}
+                names = ", ".join(f"{n} ({i})" if n in repeated else n for n, i in found)
+                print(f"  {label}: {names}")
         hist = [h for h in store.history(args.kind, row["def_id"]) if h["how"] != "new"]
         if hist:
             print("  History:")
@@ -214,6 +235,7 @@ def main(argv=None):
     c = sub.add_parser("cards", help="List known cards")
     c.add_argument("--tag")
     c.add_argument("--search", help="Match name or ability text")
+    c.add_argument("--newest", type=int, metavar="N", help="The N most recently released cards")
     c.set_defaults(func=cmd_cards)
 
     lo = sub.add_parser("locations", help="List locations from the database")

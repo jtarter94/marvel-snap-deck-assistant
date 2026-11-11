@@ -13,11 +13,39 @@ import gzip
 import json
 import time
 import urllib.request
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from typing import Callable
 
 from .. import __version__
 from .text import clean_name, clean_text, to_int
+
+# Plausible real dates only: drops 0, year-1 and 2038-style placeholder values.
+_MIN_TS, _MAX_TS = 1_500_000_000, 2_000_000_000
+
+
+def _date(ts) -> str | None:
+    """Unix timestamp -> ISO date, or None for missing/placeholder values."""
+    t = to_int(ts)
+    if t is None or not _MIN_TS < t < _MAX_TS:
+        return None
+    return datetime.fromtimestamp(t, timezone.utc).date().isoformat()
+
+
+def _earliest(dates) -> str | None:
+    dates = [d for d in dates if d]
+    return min(dates) if dates else None
+
+
+def _json_list(value) -> list:
+    if isinstance(value, list):
+        return value
+    try:
+        out = json.loads(value or "[]")
+    except (TypeError, ValueError):
+        return []
+    return out if isinstance(out, list) else []
+
 
 USER_AGENT = f"snap-assistant/{__version__} (personal deck-building tool; a few requests/day)"
 
@@ -91,6 +119,14 @@ def _pro_cards(raw) -> list[Record]:
                 # Game-mode versions (Champions, "Hulk - Avengers", ...) have no
                 # collection series and can't go in a normal deck.
                 "collectible": bool(series),
+                # When the card entered its *current* pool (Season Pass/Series).
+                # Later than the true release for cards that changed Series.
+                "pool_date": _earliest(_date(x.get("StartDate"))
+                                       for x in _json_list(v.get("SeriesStartDates"))
+                                       if isinstance(x, dict)),
+                # Linked cards, in both directions (Vampire Killmonger <-> Vampiric
+                # Spear). reconcile works out which one creates the other.
+                "related": [c for c in _json_list(v.get("connected_cards")) if isinstance(c, str)],
             },
         ))
     return out
@@ -105,7 +141,9 @@ def _pro_locations(raw) -> list[Record]:
             text=clean_text(v.get("description")),
             released=v.get("released") == "1",
             extra={"patch": v.get("wasChangedIn") or v.get("wasAddedIn") or None,
-                   "rarity": v.get("rarity") or None},
+                   "rarity": v.get("rarity") or None,
+                   "pool_date": _earliest(_date(x.get("date")) for x in v.get("dates") or []
+                                          if isinstance(x, dict) and x.get("type") == "Base")},
         )
         for v in raw.values()
     ]
@@ -127,7 +165,10 @@ def _zone_cards(raw) -> list[Record]:
             cost=to_int(c.get("cost")),
             power=to_int(c.get("power")),
             released=c.get("status") == "released",
-            extra={"art": c.get("art") or None},
+            extra={"art": c.get("art") or None,
+                   # Earliest dated art variant: the card's base art ships on release day.
+                   "art_date": _earliest(_date(x.get("ReleaseDate"))
+                                         for x in c.get("variants") or [] if isinstance(x, dict))},
         )
         for c in _zone_items(raw)
         if c.get("type") == "Character" and c.get("carddefid")

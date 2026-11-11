@@ -18,12 +18,16 @@ Rules, per entity (card or location) and per compared field:
 * Names are only compared for released, non-token cards. Generated cards
   (Evolved X, spells, effects) have an in-game name on marvelsnap.pro and a
   descriptive label on the Zone; there the first source's name is used.
+* ``release_date`` is the earlier of marvelsnap.pro's pool start date and
+  the Zone's earliest art date (the pool date moves when a card changes
+  Series). It's metadata, so a mismatch is noted, not treated as a conflict.
 * Overrides always win and are reported, including when the sources have
   caught up and the override can be removed.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
 
 from .sources import CARD, Record
 from .tags import derive_tags
@@ -109,7 +113,53 @@ def reconcile(
         prior = priors.get(key)
         ov = overrides.get(kind, {}).get(def_id, {})
         decisions.append(_decide(kind, def_id, providers, prior, ov, up_sources, down_sources))
+    _link_created_cards(decisions)
     return decisions
+
+
+def deck_buildable(extra: dict) -> bool:
+    return (extra.get("card_type") in (None, "Character") and not extra.get("is_token")
+            and extra.get("collectible") is not False)
+
+
+def _link_created_cards(decisions: list[Decision]):
+    """Turn marvelsnap.pro's two-way links into creates / created_by / related.
+
+    A creates B when B can't go in a deck and either A can, or A's text names
+    B. Anything else linked (e.g. two deck cards) is just ``related``.
+    """
+    cards = {d.def_id: d for d in decisions if d.kind == CARD}
+    made_by: dict[str, list[str]] = {}
+    for a in cards.values():
+        creates, related = [], []
+        for b_id in a.extra.get("related") or []:
+            b = cards.get(b_id)
+            if b is None or b_id == a.def_id:
+                continue
+            names_it = b.name.lower() in (a.values.get("text") or "").lower()
+            if not deck_buildable(b.extra) and (deck_buildable(a.extra) or names_it):
+                creates.append(b_id)
+                made_by.setdefault(b_id, []).append(a.def_id)
+            elif not (not deck_buildable(a.extra) and deck_buildable(b.extra)):
+                related.append(b_id)
+        a.extra["creates"], a.extra["related_cards"] = sorted(creates), sorted(related)
+    for d in cards.values():
+        d.extra["created_by"] = sorted(made_by.get(d.def_id, []))
+
+
+RELEASE_DATE_TOLERANCE_DAYS = 2
+
+
+def _release_date(extra: dict) -> tuple[str | None, bool | None]:
+    """(date, whether both sources agree within the tolerance)."""
+    pool, art = extra.get("pool_date"), extra.get("art_date")
+    found = [x for x in (pool, art) if x]
+    if not found:
+        return None, None
+    if len(found) == 1:
+        return found[0], None
+    gap = abs((date.fromisoformat(pool) - date.fromisoformat(art)).days)
+    return min(found), gap <= RELEASE_DATE_TOLERANCE_DAYS
 
 
 def _decide(kind, def_id, providers, prior, ov, up_sources, down_sources) -> Decision:
@@ -187,6 +237,10 @@ def _decide(kind, def_id, providers, prior, ov, up_sources, down_sources) -> Dec
     if "collectible" in ov:
         d.extra["collectible"] = bool(ov["collectible"])
         d.overridden.append("collectible")
+    d.extra["release_date"], d.extra["release_date_agreed"] = _release_date(d.extra)
+    if "release_date" in ov:
+        d.extra["release_date"], d.extra["release_date_agreed"] = ov["release_date"], None
+        d.overridden.append("release_date")
     if "released" in ov:
         d.released = bool(ov["released"])
         d.overridden.append("released")

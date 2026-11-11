@@ -16,21 +16,41 @@ RULES = SanityRules(min_count={"card": 1, "location": 1})
 SOURCES = [MARVELSNAP_PRO, MARVELSNAPZONE]
 
 
+DAY = 86400
+NOV_3_2026 = 1793732400        # 2026-11-03 UTC (approx. release time)
+
+
 def pro_card(def_id, name, cost, power, text, *, used=True, token=False, type_="Character",
-             series="Series3", patch="42.6.2"):
+             series="Series3", patch="42.6.2", pool_ts=None, related=()):
+    starts = [{"Data": "Series4", "StartDate": -62135596800}]   # year-1 placeholder, as in the real data
+    if pool_ts:
+        starts.append({"Data": series, "StartDate": pool_ts})
     return {"CardDefId": def_id, "name": name, "cost": str(cost), "power": str(power),
             "description": text, "use_count": "5" if used else "0", "is_Token": "1" if token else "0",
-            "type": type_, "CardSeriesDefId": series, "wasChangedIn": patch, "wasAddedIn": ""}
+            "type": type_, "CardSeriesDefId": series, "wasChangedIn": patch, "wasAddedIn": "",
+            "SeriesStartDates": json.dumps(starts), "connected_cards": json.dumps(list(related))}
 
 
-def zone_card(def_id, name, cost, power, text, *, released=True, type_="Character"):
+def zone_card(def_id, name, cost, power, text, *, released=True, type_="Character", art_ts=None):
+    variants = [{"variant_order": "01", "ReleaseDate": 2147483647}]   # 2038 placeholder
+    if art_ts:
+        variants.append({"variant_order": "02", "ReleaseDate": art_ts})
     return {"carddefid": def_id, "name": name, "cost": cost, "power": power, "ability": text,
-            "type": type_, "status": "released" if released else "unreleased", "art": ""}
+            "type": type_, "status": "released" if released else "unreleased", "art": "",
+            "variants": variants}
 
 
 def base_payloads():
     pro_cards = {
-        "knull": pro_card("Knull", "Knull", 6, 0, "<b>Ongoing:</b> Has the combined Power of all cards destroyed this game."),
+        # Knull moved Series, so marvelsnap.pro's pool date is years after release.
+        "knull": pro_card("Knull", "Knull", 6, 0, "<b>Ongoing:</b> Has the combined Power of all cards destroyed this game.",
+                          pool_ts=1741028400),
+        "vampirekillmonger": pro_card("VampireKillmonger", "Vampire Killmonger", 2, 2,
+                                      "<b>End of Turn:</b> If you spent all your Energy, get a Vampiric Spear.",
+                                      series="Series5", pool_ts=NOV_3_2026, related=["VampiricSpear"]),
+        "vampiricspear": pro_card("VampiricSpear", "Vampiric Spear", 1, 0,
+                                  "<b>On Reveal:</b> Vampire Killmonger steals 2 Power from a character in your opponent's hand.",
+                                  type_="Skill", used=False, related=["VampireKillmonger"]),
         "batroc": pro_card("Batroc", "Batroc", 3, 3, "When a card moves, follow it to gain +2 Power. <i>(once per turn)</i>"),
         "hulk": pro_card("Hulk", "Hulk", 6, 12, '<i>"HULK SMASH!"</i>', series="Starter"),
         "evolvedhulk": pro_card("EvolvedHulk", "Hulk", 6, 14, "", token=True, used=False, series="None"),
@@ -39,7 +59,14 @@ def base_payloads():
         "newguy": pro_card("NewGuy", "New Guy", 2, 2, "", used=False),
     }
     zone_cards = {"success": {"cards": [
-        zone_card("Knull", "Knull", 6, 0, "<span>Ongoing</span>: Has the combined Power of all cards destroyed this game."),
+        zone_card("Knull", "Knull", 6, 0, "<span>Ongoing</span>: Has the combined Power of all cards destroyed this game.",
+                  art_ts=1670439600),
+        zone_card("VampireKillmonger", "Vampire Killmonger", 2, 2,
+                  "<span>End of Turn</span>: If you spent all your Energy, get a Vampiric Spear.",
+                  art_ts=NOV_3_2026 + DAY // 2),
+        zone_card("VampiricSpear", "Vampiric Spear", 1, 0,
+                  "<span>On Reveal</span>: Vampire Killmonger steals 2 Power from a character in your opponent's hand.",
+                  released=False),
         zone_card("Batroc", "Batroc", 3, 3, ""),  # the Zone leaves some text blank
         zone_card("Hulk", "Hulk", 6, 12, ""),
         zone_card("EvolvedHulk", "Evolved Hulk", 6, 14, "", released=False),
@@ -108,6 +135,8 @@ def test_derive_tags():
     assert "move" in derive_tags("You can move this once.")
     assert "discard" in derive_tags("On Reveal: Discard a card from your hand.")
     assert "afflict" in derive_tags("On Reveal: Give a random enemy card -2 Power.")
+    assert {"end-of-turn", "add-cards"} <= derive_tags(
+        "End of Turn: If you spent all your Energy, get a Vampiric Spear.")
     assert "vanilla" in derive_tags("", 6, 12)
     assert "zoo" in derive_tags("", 1, 2)
 
@@ -158,6 +187,34 @@ def test_second_identical_sync_reports_no_changes(store):
     assert not any(d.touched for d in r.decisions)
     assert "No changes." in r.report
     assert not r.noteworthy
+
+
+def test_release_date_is_earliest_real_date(store):
+    run(store, base_payloads())
+    knull = row(store, "Knull")
+    assert knull["release_date"] == "2022-12-07"          # art date beats the later pool date
+    assert json.loads(knull["extra"])["release_date_agreed"] is False
+    vk = row(store, "VampireKillmonger")
+    assert vk["release_date"] == "2026-11-03"
+    assert json.loads(vk["extra"])["release_date_agreed"] is True
+    assert row(store, "Batroc")["release_date"] is None   # only placeholders -> unknown
+
+
+def test_created_cards_link_one_way(store):
+    run(store, base_payloads())
+    vk = json.loads(row(store, "VampireKillmonger")["extra"])
+    spear = json.loads(row(store, "VampiricSpear")["extra"])
+    assert vk["creates"] == ["VampiricSpear"] and vk["created_by"] == []
+    assert spear["created_by"] == ["VampireKillmonger"] and spear["creates"] == []
+    assert spear["related_cards"] == []
+
+
+def test_newest_cards_from_db(store, tmp_path, capsys):
+    run(store, base_payloads())
+    main(["--db", str(tmp_path / "snap.db"), "cards", "--newest", "2"])
+    lines = capsys.readouterr().out.splitlines()
+    assert lines[0].startswith("2026-11-03") and "Vampire Killmonger" in lines[0]
+    assert lines[1].startswith("2022-12-07") and "Knull" in lines[1]
 
 
 # --- balance patch arriving at different times ------------------------------
@@ -260,9 +317,9 @@ def test_pool_from_db_has_only_deck_buildable_cards(store, tmp_path):
     run(store, base_payloads())
     pool = CardPool.from_db(tmp_path / "snap.db")
     names = {c.name for c in pool}
-    assert {"Knull", "Batroc", "Hulk", "Zone Only"} <= names
-    # token, game-mode Champion, Skill, unreleased
-    assert not names & {"Carnage Champion", "Spider Sense", "New Guy"}
+    assert {"Knull", "Batroc", "Hulk", "Zone Only", "Vampire Killmonger"} <= names
+    # token, game-mode Champion, Skills, unreleased
+    assert not names & {"Carnage Champion", "Spider Sense", "Vampiric Spear", "New Guy"}
     assert len([c for c in pool if c.name == "Hulk"]) == 1 and pool.get("hulk").power == 12
     assert pool.get("knull") is pool.get("Knull")
 
@@ -277,7 +334,12 @@ def test_cli_reads_database(store, tmp_path, capsys):
     db = str(tmp_path / "snap.db")
     assert main(["--db", db, "show", "knull"]) == 0
     out = capsys.readouterr().out
-    assert "Cost 6  Power 0" in out and "confirmed" in out
+    assert "Cost 6  Power 0" in out and "confirmed" in out and "Released: 2022-12-07" in out
+    main(["--db", db, "show", "vampire killmonger"])
+    assert "Creates: Vampiric Spear" in capsys.readouterr().out
+    main(["--db", db, "show", "vampiric spear"])
+    out = capsys.readouterr().out
+    assert "Created by: Vampire Killmonger" in out and "Skill" in out
     main(["--db", db, "locations"])
     assert "Altar of Death" in capsys.readouterr().out
     main(["--db", db, "issues"])

@@ -14,6 +14,7 @@ class Card:
     ability: str = ""
     tags: frozenset[str] = field(default_factory=frozenset)
     def_id: str = ""
+    release_date: str | None = None   # ISO date, when known (synced data only)
 
     @classmethod
     def from_dict(cls, d: dict) -> "Card":
@@ -24,6 +25,7 @@ class Card:
             ability=d.get("ability", ""),
             tags=frozenset(t.lower() for t in d.get("tags", [])),
             def_id=d.get("def_id", ""),
+            release_date=d.get("release_date"),
         )
 
 

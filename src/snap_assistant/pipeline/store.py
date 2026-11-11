@@ -25,12 +25,12 @@ CREATE TABLE IF NOT EXISTS entities (
     confirmed_fields TEXT NOT NULL DEFAULT '[]',
     sources TEXT NOT NULL DEFAULT '[]',
     extra TEXT NOT NULL DEFAULT '{}',
+    release_date TEXT,
     first_seen TEXT NOT NULL,
     last_seen TEXT NOT NULL,
     last_changed TEXT NOT NULL,
     PRIMARY KEY (kind, def_id)
 );
-CREATE INDEX IF NOT EXISTS entities_name ON entities (kind, name COLLATE NOCASE);
 
 CREATE TABLE IF NOT EXISTS history (
     id INTEGER PRIMARY KEY,
@@ -70,6 +70,12 @@ CREATE TABLE IF NOT EXISTS runs (
 """
 
 
+INDEXES = """
+CREATE INDEX IF NOT EXISTS entities_name ON entities (kind, name COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS entities_release ON entities (kind, release_date);
+"""
+
+
 def now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
@@ -94,6 +100,15 @@ class Store:
         self.db.row_factory = sqlite3.Row
         self.db.execute("PRAGMA foreign_keys = ON")
         self.db.executescript(SCHEMA)
+        self._migrate()
+
+    def _migrate(self):
+        """Bring databases created by older versions up to date."""
+        cols = {r["name"] for r in self.db.execute("PRAGMA table_info(entities)")}
+        if "release_date" not in cols:
+            self.db.execute("ALTER TABLE entities ADD COLUMN release_date TEXT")
+        self.db.executescript(INDEXES)
+        self.db.commit()
 
     def close(self):
         self.db.close()
@@ -111,6 +126,10 @@ class Store:
                 extra=json.loads(r["extra"]),
             )
         return out
+
+    def name_of(self, kind: str, def_id: str) -> str:
+        r = self.db.execute("SELECT name FROM entities WHERE kind = ? AND def_id = ?", (kind, def_id)).fetchone()
+        return r["name"] if r and r["name"] else def_id
 
     def entities(self, kind: str, released_only: bool = False, include_tokens: bool = True):
         sql = "SELECT * FROM entities WHERE kind = ?"
@@ -177,10 +196,11 @@ class Store:
                 changed = d.touched
                 self.db.execute(
                     """INSERT INTO entities (kind, def_id, name, cost, power, text, released, is_token,
-                           tags, status, confirmed_fields, sources, extra, first_seen, last_seen, last_changed)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                           tags, status, confirmed_fields, sources, extra, release_date,
+                           first_seen, last_seen, last_changed)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                        ON CONFLICT (kind, def_id) DO UPDATE SET
-                           name=excluded.name, cost=excluded.cost, power=excluded.power, text=excluded.text,
+                           release_date=excluded.release_date, name=excluded.name, cost=excluded.cost, power=excluded.power, text=excluded.text,
                            released=excluded.released, is_token=excluded.is_token, tags=excluded.tags,
                            status=excluded.status, confirmed_fields=excluded.confirmed_fields,
                            sources=excluded.sources, extra=excluded.extra,
@@ -189,7 +209,7 @@ class Store:
                     (d.kind, d.def_id, v.get("name"), v.get("cost"), v.get("power"), v.get("text"),
                      int(d.released), int(bool(d.extra.get("is_token"))), json.dumps(d.tags), d.status,
                      json.dumps(sorted(d.confirmed_fields)), json.dumps(sorted(d.sources)),
-                     json.dumps(d.extra, sort_keys=True), ts, ts, ts,
+                     json.dumps(d.extra, sort_keys=True), d.extra.get("release_date"), ts, ts, ts,
                      int(not d.missing_from), int(changed)),
                 )
                 patch = d.extra.get("patch")
