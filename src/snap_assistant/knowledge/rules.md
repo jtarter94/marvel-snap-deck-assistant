@@ -307,7 +307,7 @@ uses; `snap-assistant sync` reports any that are missing.
 - Takes Power from a card and adds the same amount to the stealing card.
 
 ## Merge
-`status: from-card-text` · `aliases: merge, merged, merging, symbiote spider-man`
+`status: established` · `aliases: merge, merged, merging, symbiote spider-man` · `verified: player, 2026-11-11`
 
 - One card is merged into another: the merged card leaves play and the card it
   merges into gains its Power (Hulkbuster: "Merge this into one of your cards
@@ -325,7 +325,9 @@ uses; `snap-assistant sync` reports any that are missing.
     already-used Activate stays completed/used. The merge doesn't reset it.
   - It picks the *lowest-Cost* card at its location, so setting up a specific
     target (e.g. Galactus) means having nothing cheaper there.
-- Assumption to verify: Cost is not combined when cards merge.
+- **Only Power is added; Cost never is.** The card keeps its own Cost (a
+  Symbiote Spider-Man with Galactus merged in gains Galactus's 6 Power but is
+  still a 4-Cost card for anything that checks Cost).
 
 ## Banish
 `status: from-card-text` · `aliases: banish, banished`

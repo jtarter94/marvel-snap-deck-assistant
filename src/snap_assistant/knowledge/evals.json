@@ -214,6 +214,27 @@
         "Activate",
         "Objective"
       ]
+    },
+    {
+      "id": "merge-cost",
+      "question": "Galactus (6/6) merges into my Symbiote Spider-Man (4/7). What are Symbiote Spider-Man's Cost and Power now?",
+      "expected": "Cost 4, Power 13. Merging adds only the merged card's Power; Cost isn't added.",
+      "assumes": {
+        "Symbiote Spider-Man": "Merge your lowest-Cost card here into this"
+      },
+      "rules": [
+        "Merge"
+      ],
+      "check_stats": {
+        "Symbiote Spider-Man": {
+          "cost": 4,
+          "power": 7
+        },
+        "Galactus": {
+          "cost": 6,
+          "power": 6
+        }
+      }
     }
   ]
 }
