@@ -138,3 +138,12 @@ def test_mcp_tools(store, monkeypatch):
     assert "No card named" in mcp_server.get_card("zzzz")
     assert "Merge" in mcp_server.rules("merge")
     assert "Marked 1 card" in mcp_server.set_owned(["Knull"])
+
+
+def test_collectible_skills_are_deck_cards_but_generated_ones_are_not(store):
+    assert "deck-buildable" in A.describe_card(store, "Spider Sense")
+    assert "Spider Sense" in A.search_cards(store, text="Buff")
+    out = A.analyze_deck(store, ["Spider Sense", "Knull"])
+    assert "Spider Sense can't go in a deck" not in out
+    assert "Polymorph can't go in a deck" in A.analyze_deck(store, ["Polymorph"])
+    assert "deck-buildable" not in A.describe_card(store, "Vampiric Spear")

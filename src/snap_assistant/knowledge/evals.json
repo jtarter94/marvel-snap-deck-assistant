@@ -56,7 +56,7 @@
     {
       "id": "spear-in-deck",
       "question": "Can I put Vampiric Spear in my deck?",
-      "expected": "No. It's a Skill that Vampire Killmonger creates (End of Turn, if you spent all your Energy). Only collectible characters go in decks.",
+      "expected": "No. It's a Skill that Vampire Killmonger creates (End of Turn, if you spent all your Energy). It has no collection series, so unlike collectible Skills such as Web Sling it can't go in a deck.",
       "assumes": {"Vampire Killmonger": "get a Vampiric Spear"},
       "rules": ["Deck and collection", "Created cards"]
     },

@@ -50,12 +50,14 @@ def base_payloads():
                                       series="Series5", pool_ts=NOV_3_2026, related=["VampiricSpear"]),
         "vampiricspear": pro_card("VampiricSpear", "Vampiric Spear", 1, 0,
                                   "<b>On Reveal:</b> Vampire Killmonger steals 2 Power from a character in your opponent's hand.",
-                                  type_="Skill", used=False, related=["VampireKillmonger"]),
+                                  type_="Skill", used=False, series="None", related=["VampireKillmonger"]),
         "batroc": pro_card("Batroc", "Batroc", 3, 3, "When a card moves, follow it to gain +2 Power. <i>(once per turn)</i>"),
         "hulk": pro_card("Hulk", "Hulk", 6, 12, '<i>"HULK SMASH!"</i>', series="Starter"),
         "evolvedhulk": pro_card("EvolvedHulk", "Hulk", 6, 14, "", token=True, used=False, series="None"),
         "carnagechampion": pro_card("CarnageChampion", "Carnage Champion", 2, 2, "<b>On Reveal:</b> Destroy.", series="None"),
-        "spidersense": pro_card("SpiderSense", "Spider Sense", 5, 0, "<b>On Reveal:</b> Buff.", type_="Skill"),
+        # A collectible Skill: has a collection series, goes in decks.
+        "spidersense": pro_card("SpiderSense", "Spider Sense", 5, 0, "<b>On Reveal:</b> Buff.", type_="Skill",
+                                series="Series4"),
         "newguy": pro_card("NewGuy", "New Guy", 2, 2, "", used=False),
         "carnage": pro_card("Carnage", "Carnage", 2, 2, "<b>On Reveal:</b> Destroy your other cards here."),
         "scarletwitch": pro_card("ScarletWitch", "Scarlet Witch", 2, 3, "<b>On Reveal:</b> Replace this location with a new one.",
@@ -72,9 +74,9 @@ def base_payloads():
         "merlin": pro_card("Merlin", "Merlin", 2, 2, "<b>Start of Turn:</b> Add an Incantation to your hand.",
                            series="Series5", related=["Polymorph", "OnceAndFuture"]),
         "polymorph": pro_card("Polymorph", "Polymorph", 1, 0, "<b>On Reveal:</b> Transform your lowest-Power character here.",
-                              type_="Skill", used=False, related=["Merlin"]),
+                              type_="Skill", used=False, series="None", related=["Merlin"]),
         "onceandfuture": pro_card("OnceAndFuture", "Once And Future", 2, 0, "<b>On Reveal:</b> Something old.",
-                                  type_="Skill", used=False, related=["Merlin"]),
+                                  type_="Skill", used=False, series="None", related=["Merlin"]),
     }
     zone_cards = {"success": {"cards": [
         zone_card("Knull", "Knull", 6, 0, "<span>Ongoing</span>: Has the combined Power of all cards destroyed this game.",
@@ -399,9 +401,9 @@ def test_pool_from_db_has_only_deck_buildable_cards(store, tmp_path):
     run(store, base_payloads())
     pool = CardPool.from_db(tmp_path / "snap.db")
     names = {c.name for c in pool}
-    assert {"Knull", "Batroc", "Hulk", "Zone Only", "Vampire Killmonger"} <= names
-    # token, game-mode Champion, Skills, unreleased
-    assert not names & {"Carnage Champion", "Spider Sense", "Vampiric Spear", "New Guy"}
+    assert {"Knull", "Batroc", "Hulk", "Zone Only", "Vampire Killmonger", "Spider Sense"} <= names
+    # token, game-mode Champion, generated Skills, unreleased
+    assert not names & {"Carnage Champion", "Vampiric Spear", "Polymorph", "New Guy"}
     assert len([c for c in pool if c.name == "Hulk"]) == 1 and pool.get("hulk").power == 12
     assert pool.get("knull") is pool.get("Knull")
 

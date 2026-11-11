@@ -127,6 +127,15 @@ CREATE INDEX IF NOT EXISTS pool_members_card ON pool_members (def_id);
 """
 
 
+# What can go in a deck: released, collectible (has a collection series), not a
+# token, and a Character or a collectible Skill. Generated Skills (Polymorph,
+# Vampiric Spear) and game-mode cards have no series, so collectible = 0.
+DECK_CARD_TYPES = ("Character", "Skill")
+DECK_BUILDABLE_SQL = (
+    "kind = 'card' AND released = 1 AND is_token = 0"
+    " AND COALESCE(card_type, 'Character') IN ('Character', 'Skill') AND COALESCE(collectible, 1) = 1"
+)
+
 # Keys older versions kept in `extra` that now live in their own tables.
 _RETIRED_EXTRA = {"creates", "created_by", "related_cards"}
 
@@ -195,8 +204,8 @@ class Store:
         if not include_tokens:
             sql += " AND is_token = 0"
         if kind == "card" and not include_tokens:
-            # Game-mode Skills/Augments/Trinkets and game-mode versions aren't deck-buildable.
-            sql += " AND COALESCE(card_type, 'Character') = 'Character' AND COALESCE(collectible, 1) = 1"
+            # Generated/game-mode cards, Augments and Trinkets aren't deck-buildable.
+            sql += " AND COALESCE(card_type, 'Character') IN ('Character', 'Skill') AND COALESCE(collectible, 1) = 1"
         return list(self.db.execute(sql + " ORDER BY name COLLATE NOCASE", (kind,)))
 
     def find(self, kind: str, name_or_id: str):

@@ -15,10 +15,8 @@ from . import knowledge
 from .analysis import analyze, suggest
 from .cards import CardPool, _key
 from .models import Card, Deck
-from .pipeline.store import Store
-
-DECK_BUILDABLE = ("kind = 'card' AND released = 1 AND is_token = 0"
-                  " AND COALESCE(card_type, 'Character') = 'Character' AND COALESCE(collectible, 1) = 1")
+from .pipeline.store import DECK_BUILDABLE_SQL as DECK_BUILDABLE
+from .pipeline.store import DECK_CARD_TYPES, Store
 
 
 class NotFound(ValueError):
@@ -86,13 +84,14 @@ def describe_card(store: Store, name: str, kind: str = "card") -> str:
              "created in game" if created and not version_of else "unreleased"]
     if row["is_token"]:
         flags.append("token")
+    buildable = kind == "card" and _is_deck_buildable(row)
     if row["card_type"] not in (None, "Character"):
-        flags.append(row["card_type"] if created else f"{row['card_type']} (game mode)")
+        flags.append(row["card_type"] if created or buildable else f"{row['card_type']} (game mode)")
     elif version_of:
         flags.append("game-mode version")
     elif kind == "card" and row["collectible"] == 0 and not created:
         flags.append("not collectible")
-    if kind == "card" and _is_deck_buildable(row):
+    if buildable:
         flags.append("deck-buildable")
         own = _owned_label(store, def_id).strip()
         if own:
@@ -151,7 +150,8 @@ def describe_card(store: Store, name: str, kind: str = "card") -> str:
 
 def _is_deck_buildable(r) -> bool:
     return (r["kind"] == "card" and r["released"] and not r["is_token"]
-            and (r["card_type"] or "Character") == "Character" and (r["collectible"] is None or r["collectible"]))
+            and (r["card_type"] or "Character") in DECK_CARD_TYPES
+            and (r["collectible"] is None or r["collectible"]))
 
 
 # --- search ------------------------------------------------------------------
@@ -280,7 +280,7 @@ def _deck_cards(store: Store, names: list[str]) -> tuple[list, list[str]]:
             problems.append(str(e))
             continue
         if not _is_deck_buildable(r):
-            problems.append(f"{r['name']} can't go in a deck (token, Skill, game-mode or unreleased card).")
+            problems.append(f"{r['name']} can't go in a deck (token, generated or game-mode card, or unreleased).")
         rows.append(r)
     return rows, problems
 

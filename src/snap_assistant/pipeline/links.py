@@ -25,6 +25,7 @@ import re
 from dataclasses import dataclass, field
 
 from .reconcile import Decision
+from .store import DECK_CARD_TYPES
 from .sources import CARD
 
 CREATES, VERSION_OF, RELATED = "creates", "version_of", "related"
@@ -69,7 +70,7 @@ def _slug(s: str) -> str:
 
 def deck_buildable(d: Decision) -> bool:
     x = d.extra
-    return (x.get("card_type") in (None, "Character") and not x.get("is_token")
+    return (x.get("card_type") in (None, *DECK_CARD_TYPES) and not x.get("is_token")
             and x.get("collectible") is not False)
 
 

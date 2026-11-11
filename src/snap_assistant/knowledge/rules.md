@@ -22,9 +22,11 @@ uses; `snap-assistant sync` reports any that are missing.
 
 - A deck is exactly 12 cards with no duplicates (different art variants of the
   same card count as the same card).
-- Only collectible characters can be put in a deck. Tokens, Skills, Augments,
-  Trinkets, game-mode versions ("X - Brotherhood of Mutants", "X Champion")
-  and other created cards can't; they appear through card effects or modes.
+- Deck cards are collectible **characters** and collectible **Skills** (see
+  Skills). Tokens, generated Skills (e.g. Polymorph, Vampiric Spear),
+  Augments, Trinkets, game-mode versions ("X - Brotherhood of Mutants",
+  "X Champion") and other created cards can't go in a deck; they appear
+  through card effects or game modes.
 - Cards in your deck at the start of a game are your "original" cards; anything
   added during the game is a **created** card (see Created cards).
 
@@ -110,6 +112,21 @@ uses; `snap-assistant sync` reports any that are missing.
 - "Original" or "base" Power is the card's printed Power; Shadow King-style
   effects reset to it, removing permanent and continuous changes.
 - Power gained in hand or deck stays with the card when it's played.
+
+## Skills
+`status: from-card-text` · `aliases: skill, skills, skill card, spell`
+
+- Skills are cards with a Cost and an ability but no character (they show 0
+  Power), e.g. The Inversion, Web Sling, Fastball Special, Astral Projection.
+  Most of their text is an On Reveal.
+- Some Skills are **collectible** (they belong to a collection series and go
+  in decks like characters); others are only **generated** by cards (Merlin's
+  Incantations, Vampire Killmonger's Vampiric Spear) or by game modes.
+- Text that says "character" doesn't include Skills; text that says "card"
+  does (e.g. Polymorph transforms a character; Quinjet's "created cards"
+  includes generated Skills).
+- Assumption to verify: whether a Skill stays at its location after revealing
+  (taking one of the 4 slots and counting as a card there) or leaves play.
 
 ## Created cards
 `status: established` · `aliases: created, generated, tokens, add to hand, copies`

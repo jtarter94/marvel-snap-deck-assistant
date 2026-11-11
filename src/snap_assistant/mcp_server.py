@@ -23,8 +23,10 @@ Ground every claim about a card in its current text from get_card or
 search_cards (cards change with patches; don't rely on memory). Before
 explaining an interaction, check the relevant rules sections with `rules`;
 sections marked "from-card-text" are inferred, so say when an answer depends
-on them. Deck-buildable means released, collectible characters; tokens,
-Skills and game-mode versions only appear through card effects (see pools).
+on them. Deck-buildable means released, collectible characters and Skills
+(Skills like The Inversion or Web Sling go in decks too); tokens, generated
+Skills (e.g. Polymorph) and game-mode versions only appear through card
+effects (see pools and get_card's "Created by").
 When the player has recorded a collection, point out cards they don't own so
 they can plan Token spending, but never limit ideas to owned cards unless asked.
 """
