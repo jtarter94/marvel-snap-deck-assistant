@@ -185,7 +185,7 @@ uses; `snap-assistant sync` reports any that are missing.
   is in play, including the turn it was played.
 
 ## Start of Turn
-`status: from-card-text` · `aliases: start of each turn, beginning of turn`
+`status: established` · `aliases: start of each turn, beginning of turn` · `verified: player, 2026-11-11`
 
 - Triggers at the start of each turn while the card is in play (e.g. Merlin:
   "Start of Turn: Add an Incantation to your hand"). The turn it's played it
@@ -245,7 +245,7 @@ uses; `snap-assistant sync` reports any that are missing.
   revived or copied card can complete it again is unconfirmed).
 
 ## Horde
-`status: from-card-text` · `aliases: zombie horde, horde +1, horde +2, horde +3, horde +4`
+`status: established` · `aliases: zombie horde, horde +1, horde +2, horde +3, horde +4` · `verified: player, 2026-11-11`
 
 - "Horde +N" gives your **Zombie Horde** N Power ("Give your Zombie Horde that
   much Power"). If you don't have a Zombie Horde yet, it is created first
@@ -274,17 +274,17 @@ uses; `snap-assistant sync` reports any that are missing.
   from Ongoing cards don't trigger "When Empowered".
 
 ## Frontline and Backline
-`status: from-card-text` · `aliases: frontline, backline, duo cards, doomsday`
+`status: established` · `aliases: frontline, backline, duo cards, doomsday` · `verified: player, 2026-11-11`
 
 - Cards with two halves (the Doomsday duo cards, e.g. "Gambit & Shang-Chi
   Doomsday: Frontline | On Reveal: … Backline | On Reveal: …"). The half that
   applies depends on whether the card is in the front row or the back row
   (see Front row and back row).
-- These cards are not yet released in the current data; treat the details
-  as provisional.
+- The Doomsday duo cards aren't released yet in the current data; recheck
+  their text when they arrive.
 
 ## Infect
-`status: from-card-text` · `aliases: infect, infected`
+`status: established` · `aliases: infect, infected` · `verified: player, 2026-11-11`
 
 - Replaces the text of the infected cards with the infecting card's text
   (Techno-Organic Virus: "Infect your other cards here (replace their text)").
@@ -338,7 +338,7 @@ uses; `snap-assistant sync` reports any that are missing.
   still a 4-Cost card for anything that checks Cost).
 
 ## Banish
-`status: from-card-text` · `aliases: banish, banished`
+`status: established` · `aliases: banish, banished` · `verified: player, 2026-11-11`
 
 - Removes a card from the game without destroying or discarding it, so
   "destroyed"/"discarded" counters and triggers don't see it.
@@ -367,7 +367,7 @@ uses; `snap-assistant sync` reports any that are missing.
   applying; a blanked card in hand never does its ability.
 
 ## Transform
-`status: from-card-text` · `aliases: transform, transforms, becomes`
+`status: established` · `aliases: transform, transforms, becomes` · `verified: player, 2026-11-11`
 
 - The card becomes a different card (e.g. Polymorph: "Transform your
   lowest-Power character here into one that costs 1 more"). Treat it as the
