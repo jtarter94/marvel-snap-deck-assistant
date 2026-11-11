@@ -1,6 +1,6 @@
 [project]
 name = "snap-assistant"
-version = "0.1.0"
+version = "0.2.0"
 description = "Deck-building assistant for Marvel Snap: validate decks, analyze curves, and suggest cards."
 requires-python = ">=3.10"
 dependencies = []

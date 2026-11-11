@@ -1,0 +1,5 @@
+{
+  "_help": "Manual fixes applied on top of the synced data. Keyed by kind then CardDefId (see `snap-assistant show <name>`). Fields: name, cost, power, text, released, collectible, tags_add, tags_remove. Sync reports when the sources agree with an override so you can delete it.",
+  "card": {},
+  "location": {}
+}

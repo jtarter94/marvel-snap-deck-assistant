@@ -13,6 +13,7 @@ class Card:
     power: int
     ability: str = ""
     tags: frozenset[str] = field(default_factory=frozenset)
+    def_id: str = ""
 
     @classmethod
     def from_dict(cls, d: dict) -> "Card":
@@ -22,6 +23,7 @@ class Card:
             power=int(d["power"]),
             ability=d.get("ability", ""),
             tags=frozenset(t.lower() for t in d.get("tags", [])),
+            def_id=d.get("def_id", ""),
         )
 
 

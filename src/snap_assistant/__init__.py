@@ -1,5 +1,7 @@
 """Marvel Snap deck assistant."""
-from .models import Card, Deck
-from .cards import CardPool
+__version__ = "0.2.0"
 
-__all__ = ["Card", "Deck", "CardPool"]
+from .models import Card, Deck  # noqa: E402
+from .cards import CardPool  # noqa: E402
+
+__all__ = ["Card", "Deck", "CardPool", "__version__"]

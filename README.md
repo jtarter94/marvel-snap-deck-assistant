@@ -9,39 +9,97 @@ A small, dependency-free Python toolkit for building Marvel Snap decks:
 ## Quick start
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
+uv venv --python 3.12 .venv && source .venv/bin/activate   # or python -m venv (3.10+)
+uv pip install -e ".[dev]"
+snap-assistant sync                     # pull the latest cards & locations
 snap-assistant analyze examples/destroy.txt
 snap-assistant suggest examples/destroy.txt -n 5
 snap-assistant cards --tag move
+snap-assistant show knull               # card + change history
+snap-assistant locations --search energy
 pytest
 ```
 
 ## Deck files
 
-Plain text, one card name per line (case-insensitive). `#` starts a comment.
+Plain text, one card name per line (case-, space- and punctuation-insensitive,
+so `Ant-Man` and `ant man` both work; the game id like `AntMan` works too).
+`#` starts a comment.
 
-## Card data
+## Card data pipeline
 
-`src/snap_assistant/data/cards.json` ships a small sample set. Card stats and
-abilities change with balance patches, so treat it as seed data: extend it or
-pass your own file with `--cards path/to/cards.json`. Each entry:
+`snap-assistant sync` downloads cards and locations from two free, unofficial
+sources, cross-checks them, and stores the result in SQLite at
+`~/Library/Application Support/snap-assistant/snap.db` (override with
+`SNAP_ASSISTANT_HOME` or `--db`). Without a database the commands fall back to
+the small bundled sample in `src/snap_assistant/data/cards.json`.
+
+| Source | Gives us |
+|---|---|
+| [marvelsnap.pro](https://marvelsnap.pro) | game patch numbers, change history, token / game-mode / collection-series flags |
+| [Marvel Snap Zone](https://marvelsnapzone.com) | released/unreleased status, art |
+
+Both are matched on the game's internal id (`CardDefId`). Per card and field:
+
+- **Both agree** → accepted (`confirmed`).
+- **They disagree** → `conflict`: the previous value is kept until they agree
+  (e.g. one site updates hours after a balance patch) or you override it.
+- **Only one source changed a field both used to confirm** (the other is down
+  or lagging) → held as `pending` until a second source confirms.
+- **Only one source has the card at all** → `provisional`.
+- A card is **released** once either source says so.
+- A source that errors, returns too few records, or shrinks by more than 10%
+  since the last good run is ignored for that run; if both fail nothing changes.
+
+Only released, collectible **characters** go in the deck-building pool: tokens,
+game-mode Skills/Augments and game-mode versions (Champions, "Hulk - Avengers")
+are stored but excluded.
+
+Each run writes a Markdown report (`reports/latest.md` next to the database)
+listing changes with their game patch, new cards, conflicts and held changes.
+`snap-assistant issues` lists what's open. Ability tags (`on-reveal`,
+`destroy`, `move`, `discard`, `afflict`, `ramp`, …) are derived from the card
+text automatically.
+
+**Fixing data by hand:** add an entry to
+`src/snap_assistant/data/overrides.json`, keyed by kind and game id:
 
 ```json
-{"name": "Knull", "cost": 6, "power": 0, "ability": "...", "tags": ["ongoing", "destroy"]}
+{"card": {"Knull": {"power": 2, "tags_add": ["control"]}}, "location": {}}
 ```
 
-Tags drive the archetype read and suggestions (e.g. `destroy`, `move`,
-`ongoing`, `on-reveal`, `discard`, `zoo`).
+Overrides win over both sources; the report tells you when the sources have
+caught up and the override can be removed.
+
+### Running it on a schedule (macOS)
+
+```bash
+scripts/install-launchd.sh        # every 6 hours, plus once now
+scripts/install-launchd.sh --uninstall
+```
+
+The job runs `sync --notify` from this checkout's `.venv`, shows a macOS
+notification when cards change, new conflicts appear or a source fails, and
+logs to `logs/sync.log` next to the database.
 
 ## Layout
 
 ```
 src/snap_assistant/
   models.py    Card, Deck, rule validation
-  cards.py     CardPool (JSON loading, lookup, tag filter)
+  cards.py     CardPool (JSON or database loading, lookup, tag filter)
   analysis.py  curve/archetype analysis, suggestions
   cli.py       `snap-assistant` command
+  pipeline/
+    sources.py    source adapters (fetch + parse to records)
+    text.py       text normalisation so sources compare fairly
+    reconcile.py  cross-validation rules
+    store.py      SQLite schema, history, open issues, run log
+    sync.py       sanity checks, orchestration, report
+    tags.py       ability-text → archetype tags
+    notify.py     macOS notifications
+scripts/
+  install-launchd.sh   schedule sync on a Mac
 tests/         pytest suite
 examples/      sample deck lists
 ```
@@ -49,7 +107,6 @@ examples/      sample deck lists
 ## Ideas for next steps
 
 - Import/export Snap's deck codes
-- Pull card data from a maintained source instead of the bundled JSON
 - Matchup notes and a web UI
 
 *Fan project; not affiliated with Marvel, Second Dinner or Nuverse.*
