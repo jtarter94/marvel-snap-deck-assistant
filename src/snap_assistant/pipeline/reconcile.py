@@ -113,38 +113,7 @@ def reconcile(
         prior = priors.get(key)
         ov = overrides.get(kind, {}).get(def_id, {})
         decisions.append(_decide(kind, def_id, providers, prior, ov, up_sources, down_sources))
-    _link_created_cards(decisions)
     return decisions
-
-
-def deck_buildable(extra: dict) -> bool:
-    return (extra.get("card_type") in (None, "Character") and not extra.get("is_token")
-            and extra.get("collectible") is not False)
-
-
-def _link_created_cards(decisions: list[Decision]):
-    """Turn marvelsnap.pro's two-way links into creates / created_by / related.
-
-    A creates B when B can't go in a deck and either A can, or A's text names
-    B. Anything else linked (e.g. two deck cards) is just ``related``.
-    """
-    cards = {d.def_id: d for d in decisions if d.kind == CARD}
-    made_by: dict[str, list[str]] = {}
-    for a in cards.values():
-        creates, related = [], []
-        for b_id in a.extra.get("related") or []:
-            b = cards.get(b_id)
-            if b is None or b_id == a.def_id:
-                continue
-            names_it = b.name.lower() in (a.values.get("text") or "").lower()
-            if not deck_buildable(b.extra) and (deck_buildable(a.extra) or names_it):
-                creates.append(b_id)
-                made_by.setdefault(b_id, []).append(a.def_id)
-            elif not (not deck_buildable(a.extra) and deck_buildable(b.extra)):
-                related.append(b_id)
-        a.extra["creates"], a.extra["related_cards"] = sorted(creates), sorted(related)
-    for d in cards.values():
-        d.extra["created_by"] = sorted(made_by.get(d.def_id, []))
 
 
 RELEASE_DATE_TOLERANCE_DAYS = 2

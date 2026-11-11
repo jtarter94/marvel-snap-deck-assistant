@@ -57,6 +57,24 @@ def base_payloads():
         "carnagechampion": pro_card("CarnageChampion", "Carnage Champion", 2, 2, "<b>On Reveal:</b> Destroy.", series="None"),
         "spidersense": pro_card("SpiderSense", "Spider Sense", 5, 0, "<b>On Reveal:</b> Buff.", type_="Skill"),
         "newguy": pro_card("NewGuy", "New Guy", 2, 2, "", used=False),
+        "carnage": pro_card("Carnage", "Carnage", 2, 2, "<b>On Reveal:</b> Destroy your other cards here."),
+        "scarletwitch": pro_card("ScarletWitch", "Scarlet Witch", 2, 3, "<b>On Reveal:</b> Replace this location with a new one.",
+                                 related=["ScarletWitchBrotherhoodOfMutants"]),
+        "swbom": pro_card("ScarletWitchBrotherhoodOfMutants", "Scarlet Witch - Brotherhood of Mutants", 2, 4,
+                          "<b>On Reveal:</b> Replace this location with another one. If you're winning here, "
+                          "add a Brotherhood card to your hand with +1 Power.", series="None",
+                          related=["ScarletWitch"]),
+        "mystiquebom": pro_card("MystiqueBrotherhoodOfMutants", "Mystique - Brotherhood of Mutants", 3, 0,
+                                "<b>On Reveal:</b> Copy the text of one of your Brotherhood cards here.", series="None"),
+        "queen": pro_card("ScarletWitchQueenOfChaos", "Scarlet Witch Queen of Chaos", 3, 3,
+                          "<b>Start of Turn:</b> Add an EXTREMELY random skill to your hand. It costs 0 this turn.",
+                          series="Series5", related=["ScarletWitchQueenOfChaos"]),
+        "merlin": pro_card("Merlin", "Merlin", 2, 2, "<b>Start of Turn:</b> Add an Incantation to your hand.",
+                           series="Series5", related=["Polymorph", "OnceAndFuture"]),
+        "polymorph": pro_card("Polymorph", "Polymorph", 1, 0, "<b>On Reveal:</b> Transform your lowest-Power character here.",
+                              type_="Skill", used=False, related=["Merlin"]),
+        "onceandfuture": pro_card("OnceAndFuture", "Once And Future", 2, 0, "<b>On Reveal:</b> Something old.",
+                                  type_="Skill", used=False, related=["Merlin"]),
     }
     zone_cards = {"success": {"cards": [
         zone_card("Knull", "Knull", 6, 0, "<span>Ongoing</span>: Has the combined Power of all cards destroyed this game.",
@@ -200,13 +218,77 @@ def test_release_date_is_earliest_real_date(store):
     assert row(store, "Batroc")["release_date"] is None   # only placeholders -> unknown
 
 
+def links(store):
+    return {(r["from_id"], r["to_id"], r["type"]) for r in store.db.execute("SELECT * FROM card_links")}
+
+
 def test_created_cards_link_one_way(store):
     run(store, base_payloads())
-    vk = json.loads(row(store, "VampireKillmonger")["extra"])
-    spear = json.loads(row(store, "VampiricSpear")["extra"])
-    assert vk["creates"] == ["VampiricSpear"] and vk["created_by"] == []
-    assert spear["created_by"] == ["VampireKillmonger"] and spear["creates"] == []
-    assert spear["related_cards"] == []
+    assert ("VampireKillmonger", "VampiricSpear", "creates") in links(store)
+    assert not any(a == "VampiricSpear" for a, _, _ in links(store))
+
+
+def test_game_mode_versions_link_to_base_card(store):
+    run(store, base_payloads())
+    assert ("CarnageChampion", "Carnage", "version_of") in links(store)
+    assert ("ScarletWitchBrotherhoodOfMutants", "ScarletWitch", "version_of") in links(store)
+    # the source's two-way link between them must not become "creates"
+    assert ("ScarletWitch", "ScarletWitchBrotherhoodOfMutants", "creates") not in links(store)
+
+
+def test_pools_and_shared_skills(store):
+    run(store, base_payloads())
+    pools = {p["pool_id"]: p for p in store.pools()}
+    assert pools["all-skills"]["size"] == 4            # Spider Sense, Vampiric Spear, 2 Incantations
+    assert pools["incantation-merlin"]["size"] == 2
+    assert pools["team-brotherhood-of-mutants"]["size"] == 2
+    refs = {(r["def_id"], r["pool_id"], r["relation"]) for r in store.pool_refs()}
+    assert ("ScarletWitchQueenOfChaos", "all-skills", "generates") in refs
+    assert ("Merlin", "incantation-merlin", "generates") in refs
+    assert ("ScarletWitchBrotherhoodOfMutants", "team-brotherhood-of-mutants", "generates") in refs
+    assert ("MystiqueBrotherhoodOfMutants", "team-brotherhood-of-mutants", "references") in refs
+    # Polymorph is one row, reachable two ways
+    in_pools = {p["pool_id"] for p in store.pools_containing("Polymorph")}
+    assert in_pools == {"all-skills", "incantation-merlin"}
+    assert ("Merlin", "Polymorph", "creates") in links(store)
+
+
+def test_new_skill_joins_rule_pool_automatically(store):
+    p = base_payloads()
+    run(store, p)
+    p[MARVELSNAP_PRO.urls["card"]]["hex"] = pro_card("Hex", "Hex", 2, 0, "<b>On Reveal:</b> Something.",
+                                                     type_="Skill", used=False)
+    run(store, p)
+    assert "Hex" in {m["def_id"] for m in store.pool_members("all-skills")}
+
+
+def test_graph_overrides(store):
+    ov = {"links": [{"from": "Knull", "to": "Batroc", "type": "transforms_into"},
+                    {"from": "VampireKillmonger", "to": "VampiricSpear", "type": "creates", "remove": True}],
+          "pools": [{"id": "big-guys", "name": "Big guys", "members": ["Knull", "Hulk"]}],
+          "pool_refs": [{"card": "Batroc", "pool": "big-guys", "relation": "generates"}]}
+    run(store, base_payloads(), overrides=ov)
+    assert ("Knull", "Batroc", "transforms_into") in links(store)
+    assert ("VampireKillmonger", "VampiricSpear", "creates") not in links(store)
+    assert {m["def_id"] for m in store.pool_members("big-guys")} == {"Knull", "Hulk"}
+    assert [r["card_name"] for r in store.pool_refs(pool_id="big-guys")] == ["Batroc"]
+
+
+def test_old_database_is_migrated(tmp_path):
+    import sqlite3
+    path = tmp_path / "old.db"
+    db = sqlite3.connect(path)
+    db.execute("CREATE TABLE entities (kind TEXT, def_id TEXT, name TEXT, cost INTEGER, power INTEGER, text TEXT,"
+               " released INTEGER, is_token INTEGER, tags TEXT, status TEXT, confirmed_fields TEXT, sources TEXT,"
+               " extra TEXT, first_seen TEXT, last_seen TEXT, last_changed TEXT, PRIMARY KEY (kind, def_id))")
+    db.commit()
+    db.close()
+    s = Store(path)
+    cols = {r["name"] for r in s.db.execute("PRAGMA table_info(entities)")}
+    assert {"release_date", "card_type", "collectible", "category"} <= cols
+    run(s, base_payloads())
+    assert row(s, "Knull")["release_date"] == "2022-12-07"
+    s.close()
 
 
 def test_newest_cards_from_db(store, tmp_path, capsys):

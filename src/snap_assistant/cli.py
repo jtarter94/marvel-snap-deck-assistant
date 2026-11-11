@@ -114,6 +114,13 @@ def cmd_locations(args):
         print(f"{r['name']}: {r['text']}")
 
 
+def _names(rows, own_name: str, key: str = "name", id_key: str = "to_id") -> str:
+    """Comma-separated names, adding the game id where names repeat (Nico's spells)."""
+    found = [(r[key] or r[id_key], r[id_key]) for r in rows]
+    names = [n for n, _ in found]
+    return ", ".join(f"{n} ({i})" if names.count(n) > 1 or n == own_name else n for n, i in found)
+
+
 def cmd_show(args):
     from .pipeline.store import Store
 
@@ -122,18 +129,30 @@ def cmd_show(args):
         row = store.find(args.kind, args.name)
         if row is None:
             raise SystemExit(f"No {args.kind} named {args.name!r} in {args.db}")
-        print(f"{row['name']}  ({row['def_id']})")
+        def_id, name = row["def_id"], row["name"]
+        print(f"{name}  ({def_id})")
         if args.kind == "card":
             print(f"  Cost {row['cost']}  Power {row['power']}")
         print(f"  {row['text'] or '(no ability)'}")
         extra = json.loads(row["extra"])
+
+        out_links = store.links_from(def_id) if args.kind == "card" else []
+        in_links = store.links_to(def_id) if args.kind == "card" else []
+        in_pools = store.pools_containing(def_id) if args.kind == "card" else []
+        generators = [r for p in in_pools for r in store.pool_refs(pool_id=p["pool_id"])
+                      if r["relation"] == "generates" and r["def_id"] != def_id]
+        created = any(l["type"] == "creates" for l in in_links) or bool(generators)
+        version_of = [l for l in out_links if l["type"] == "version_of"]
+
         flags = [row["status"], "released" if row["released"] else
-                 "created in game" if extra.get("created_by") else "unreleased"]
+                 "created in game" if created and not version_of else "unreleased"]
         if row["is_token"]:
             flags.append("token")
-        if extra.get("card_type") not in (None, "Character"):
-            flags.append(f"{extra['card_type']} (game mode)" if not extra.get("created_by") else extra["card_type"])
-        elif args.kind == "card" and extra.get("collectible") is False and not extra.get("created_by"):
+        if row["card_type"] not in (None, "Character"):
+            flags.append(row["card_type"] if created else f"{row['card_type']} (game mode)")
+        elif version_of:
+            flags.append("game-mode version")
+        elif args.kind == "card" and row["collectible"] == 0 and not created:
             flags.append("not collectible")
         print(f"  Status: {', '.join(flags)};  sources: {', '.join(json.loads(row['sources']))}")
         if args.kind == "card":
@@ -144,18 +163,69 @@ def cmd_show(args):
             print(f"  {when}: {row['release_date']}{note}")
         if extra.get("patch"):
             print(f"  Last changed in game patch {extra['patch']}")
-        for label, key in (("Creates", "creates"), ("Created by", "created_by"), ("Related", "related_cards")):
-            if extra.get(key):
-                found = [(store.name_of("card", i), i) for i in extra[key]]
-                repeated = {n for n, _ in found if [m for m, _ in found].count(n) > 1 or n == row["name"]}
-                names = ", ".join(f"{n} ({i})" if n in repeated else n for n, i in found)
-                print(f"  {label}: {names}")
-        hist = [h for h in store.history(args.kind, row["def_id"]) if h["how"] != "new"]
+
+        sections = [
+            ("Creates", [l for l in out_links if l["type"] == "creates"], "to_id"),
+            ("Created by", [l for l in in_links if l["type"] == "creates"], "from_id"),
+            ("Version of", version_of, "to_id"),
+            ("Game-mode versions", [l for l in in_links if l["type"] == "version_of"], "from_id"),
+            ("Related", [l for l in out_links if l["type"] not in ("creates", "version_of")]
+                        + [l for l in in_links if l["type"] not in ("creates", "version_of")], None),
+        ]
+        for label, rows, id_key in sections:
+            if not rows:
+                continue
+            if id_key is None:   # related: show whichever end isn't this card
+                rows = [{"name": l["name"], "to_id": l["to_id"] if l["from_id"] == def_id else l["from_id"]}
+                        for l in rows]
+                id_key = "to_id"
+            print(f"  {label}: {_names(rows, name, id_key=id_key)}")
+        for r in store.pool_refs(def_id=def_id):
+            size = len(store.pool_members(r["pool_id"]))
+            verb = "Generates from" if r["relation"] == "generates" else "References"
+            origin = "" if r["origin"] == "source" else f" [{r['origin']}]"
+            print(f"  {verb}: {r['pool_name']} ({size} cards){origin}")
+        makers = {l["from_id"] for l in in_links if l["type"] == "creates"}
+        for p in in_pools:
+            gens = [r for r in generators if r["pool_id"] == p["pool_id"] and r["def_id"] not in makers]
+            if gens:
+                print(f"  Can be generated by: {', '.join(g['card_name'] for g in gens)} (via {p['name']})")
+
+        hist = [h for h in store.history(args.kind, def_id) if h["how"] != "new"]
         if hist:
             print("  History:")
             for h in hist:
                 print(f"    {h['at'][:10]}  {h['field']}: {h['old']} → {h['new']}  [{h['how']}"
                       + (f", patch {h['patch']}" if h["patch"] else "") + "]")
+    finally:
+        store.close()
+
+
+def cmd_pools(args):
+    from .pipeline.store import Store
+
+    store = Store(args.db)
+    try:
+        if not args.pool:
+            pools = store.pools()
+            if not pools:
+                print("No pools yet. Run `snap-assistant sync` first.")
+            for p in pools:
+                refs = store.pool_refs(pool_id=p["pool_id"])
+                gens = [r["card_name"] for r in refs if r["relation"] == "generates"]
+                print(f"{p['name']}  [{p['pool_id']}, {p['kind']}, {p['size']} cards]"
+                      + (f"  generated by: {', '.join(gens)}" if gens else ""))
+            return
+        p = store.pool(args.pool)
+        if p is None:
+            raise SystemExit(f"No pool {args.pool!r}. Run `snap-assistant pools` to list them.")
+        print(f"{p['name']}  [{p['pool_id']}, {p['kind']}]  {p['description'] or ''}")
+        for r in store.pool_refs(pool_id=p["pool_id"]):
+            print(f"  {r['relation']}: {r['card_name']} [{r['origin']}]")
+        members = store.pool_members(p["pool_id"])
+        print(f"  {len(members)} cards:")
+        for m in members:
+            print(f"    [{m['cost']}/{m['power']}] {m['name']}: {m['text'] or '(no ability)'}")
     finally:
         store.close()
 
@@ -248,6 +318,10 @@ def main(argv=None):
     sh.add_argument("name", help="Name or game id")
     sh.add_argument("--location", dest="kind", action="store_const", const="location", default="card")
     sh.set_defaults(func=cmd_show)
+
+    po = sub.add_parser("pools", help="List card pools, or show one pool's cards")
+    po.add_argument("pool", nargs="?", help="Pool id or name")
+    po.set_defaults(func=cmd_pools)
 
     i = sub.add_parser("issues", help="List open conflicts and changes awaiting confirmation")
     i.set_defaults(func=cmd_issues)

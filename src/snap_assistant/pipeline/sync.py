@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
+from .links import build_graph
 from .reconcile import CONFLICT, PENDING, Decision, reconcile
 from .sources import CARD, DEFAULT_SOURCES, LOCATION, Record, Source, http_get_json
 from .store import Store, now
@@ -117,7 +118,7 @@ def sync(
         old_issue_keys = {(r["kind"], r["def_id"], r["field"]) for r in store.issues()}
         run_id = store.start_run()
         if decisions:
-            store.apply(run_id, decisions)
+            store.apply(run_id, decisions, build_graph(decisions, overrides))
         new_issues = sum(
             1 for d in decisions for f in (*d.conflicts, *d.held)
             if (d.kind, d.def_id, f) not in old_issue_keys

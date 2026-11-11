@@ -119,13 +119,14 @@ def _pro_cards(raw) -> list[Record]:
                 # Game-mode versions (Champions, "Hulk - Avengers", ...) have no
                 # collection series and can't go in a normal deck.
                 "collectible": bool(series),
+                "category": clean_name(v.get("category")) or None,
                 # When the card entered its *current* pool (Season Pass/Series).
                 # Later than the true release for cards that changed Series.
                 "pool_date": _earliest(_date(x.get("StartDate"))
                                        for x in _json_list(v.get("SeriesStartDates"))
                                        if isinstance(x, dict)),
                 # Linked cards, in both directions (Vampire Killmonger <-> Vampiric
-                # Spear). reconcile works out which one creates the other.
+                # Spear). pipeline/links.py works out the direction.
                 "related": [c for c in _json_list(v.get("connected_cards")) if isinstance(c, str)],
             },
         ))

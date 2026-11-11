@@ -8,7 +8,12 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from typing import TYPE_CHECKING
+
 from .reconcile import Decision, Prior
+
+if TYPE_CHECKING:
+    from .links import Graph
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS entities (
@@ -26,6 +31,9 @@ CREATE TABLE IF NOT EXISTS entities (
     sources TEXT NOT NULL DEFAULT '[]',
     extra TEXT NOT NULL DEFAULT '{}',
     release_date TEXT,
+    card_type TEXT,               -- Character | Skill | Augment | Trinket (cards only)
+    collectible INTEGER,          -- 0 for game-mode versions / created cards
+    category TEXT,                -- marvelsnap.pro's grouping, when it has one
     first_seen TEXT NOT NULL,
     last_seen TEXT NOT NULL,
     last_changed TEXT NOT NULL,
@@ -46,6 +54,33 @@ CREATE TABLE IF NOT EXISTS history (
     at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS history_entity ON history (kind, def_id);
+
+-- Card graph, rebuilt every sync from the accepted data (see pipeline/links.py).
+CREATE TABLE IF NOT EXISTS card_links (
+    from_id TEXT NOT NULL,
+    to_id TEXT NOT NULL,
+    type TEXT NOT NULL,          -- creates | version_of | related | transforms_into ...
+    origin TEXT NOT NULL,        -- source | inferred | manual
+    PRIMARY KEY (from_id, to_id, type)
+);
+CREATE TABLE IF NOT EXISTS pools (
+    pool_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    kind TEXT NOT NULL,          -- rule | team | named | manual
+    description TEXT
+);
+CREATE TABLE IF NOT EXISTS pool_members (
+    pool_id TEXT NOT NULL REFERENCES pools(pool_id),
+    def_id TEXT NOT NULL,
+    PRIMARY KEY (pool_id, def_id)
+);
+CREATE TABLE IF NOT EXISTS pool_refs (
+    def_id TEXT NOT NULL,
+    pool_id TEXT NOT NULL REFERENCES pools(pool_id),
+    relation TEXT NOT NULL,      -- generates | references
+    origin TEXT NOT NULL,
+    PRIMARY KEY (def_id, pool_id, relation)
+);
 
 -- Open issues as of the latest run (conflicts and held changes); replaced each run.
 CREATE TABLE IF NOT EXISTS issues (
@@ -73,7 +108,13 @@ CREATE TABLE IF NOT EXISTS runs (
 INDEXES = """
 CREATE INDEX IF NOT EXISTS entities_name ON entities (kind, name COLLATE NOCASE);
 CREATE INDEX IF NOT EXISTS entities_release ON entities (kind, release_date);
+CREATE INDEX IF NOT EXISTS card_links_to ON card_links (to_id, type);
+CREATE INDEX IF NOT EXISTS pool_members_card ON pool_members (def_id);
 """
+
+
+# Keys older versions kept in `extra` that now live in their own tables.
+_RETIRED_EXTRA = {"creates", "created_by", "related_cards"}
 
 
 def now() -> str:
@@ -105,8 +146,10 @@ class Store:
     def _migrate(self):
         """Bring databases created by older versions up to date."""
         cols = {r["name"] for r in self.db.execute("PRAGMA table_info(entities)")}
-        if "release_date" not in cols:
-            self.db.execute("ALTER TABLE entities ADD COLUMN release_date TEXT")
+        for col, typ in (("release_date", "TEXT"), ("card_type", "TEXT"),
+                         ("collectible", "INTEGER"), ("category", "TEXT")):
+            if col not in cols:
+                self.db.execute(f"ALTER TABLE entities ADD COLUMN {col} {typ}")
         self.db.executescript(INDEXES)
         self.db.commit()
 
@@ -123,7 +166,7 @@ class Store:
                 released=bool(r["released"]),
                 confirmed_fields=set(json.loads(r["confirmed_fields"])),
                 sources=set(json.loads(r["sources"])),
-                extra=json.loads(r["extra"]),
+                extra={k: v for k, v in json.loads(r["extra"]).items() if k not in _RETIRED_EXTRA},
             )
         return out
 
@@ -138,9 +181,8 @@ class Store:
         if not include_tokens:
             sql += " AND is_token = 0"
         if kind == "card" and not include_tokens:
-            # Game-mode Skills/Augments/Trinkets aren't deck-buildable.
-            sql += (" AND COALESCE(json_extract(extra, '$.card_type'), 'Character') = 'Character'"
-                    " AND COALESCE(json_extract(extra, '$.collectible'), 1) = 1")
+            # Game-mode Skills/Augments/Trinkets and game-mode versions aren't deck-buildable.
+            sql += " AND COALESCE(card_type, 'Character') = 'Character' AND COALESCE(collectible, 1) = 1"
         return list(self.db.execute(sql + " ORDER BY name COLLATE NOCASE", (kind,)))
 
     def find(self, kind: str, name_or_id: str):
@@ -149,6 +191,49 @@ class Store:
             " ORDER BY released DESC, is_token ASC LIMIT 1",
             (kind, name_or_id, name_or_id),
         ).fetchone()
+
+    def links_from(self, def_id: str):
+        return list(self.db.execute(
+            "SELECT l.*, e.name FROM card_links l LEFT JOIN entities e ON e.kind = 'card' AND e.def_id = l.to_id"
+            " WHERE l.from_id = ? ORDER BY l.type, e.name", (def_id,)))
+
+    def links_to(self, def_id: str):
+        return list(self.db.execute(
+            "SELECT l.*, e.name FROM card_links l LEFT JOIN entities e ON e.kind = 'card' AND e.def_id = l.from_id"
+            " WHERE l.to_id = ? ORDER BY l.type, e.name", (def_id,)))
+
+    def pools(self):
+        return list(self.db.execute(
+            "SELECT p.*, (SELECT COUNT(*) FROM pool_members m WHERE m.pool_id = p.pool_id) AS size"
+            " FROM pools p ORDER BY p.kind, p.name"))
+
+    def pool(self, pool_id_or_name: str):
+        return self.db.execute(
+            "SELECT * FROM pools WHERE pool_id = ? COLLATE NOCASE OR name = ? COLLATE NOCASE",
+            (pool_id_or_name, pool_id_or_name)).fetchone()
+
+    def pool_members(self, pool_id: str):
+        return list(self.db.execute(
+            "SELECT e.* FROM pool_members m JOIN entities e ON e.kind = 'card' AND e.def_id = m.def_id"
+            " WHERE m.pool_id = ? ORDER BY e.cost, e.name", (pool_id,)))
+
+    def pool_refs(self, *, def_id: str | None = None, pool_id: str | None = None):
+        sql = ("SELECT r.*, p.name AS pool_name, e.name AS card_name FROM pool_refs r"
+               " JOIN pools p USING (pool_id)"
+               " LEFT JOIN entities e ON e.kind = 'card' AND e.def_id = r.def_id WHERE 1=1")
+        args = []
+        if def_id:
+            sql += " AND r.def_id = ?"
+            args.append(def_id)
+        if pool_id:
+            sql += " AND r.pool_id = ?"
+            args.append(pool_id)
+        return list(self.db.execute(sql + " ORDER BY r.relation, p.name, e.name", args))
+
+    def pools_containing(self, def_id: str):
+        return list(self.db.execute(
+            "SELECT p.* FROM pool_members m JOIN pools p USING (pool_id) WHERE m.def_id = ? ORDER BY p.name",
+            (def_id,)))
 
     def history(self, kind: str, def_id: str):
         return list(self.db.execute(
@@ -182,8 +267,8 @@ class Store:
         )
         self.db.commit()
 
-    def apply(self, run_id: int, decisions: list[Decision]):
-        """Write decisions in one transaction."""
+    def apply(self, run_id: int, decisions: list[Decision], graph: "Graph | None" = None):
+        """Write decisions (and the rebuilt card graph) in one transaction."""
         ts = now()
         with self.db:
             old_issues = {
@@ -197,10 +282,12 @@ class Store:
                 self.db.execute(
                     """INSERT INTO entities (kind, def_id, name, cost, power, text, released, is_token,
                            tags, status, confirmed_fields, sources, extra, release_date,
-                           first_seen, last_seen, last_changed)
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                           card_type, collectible, category, first_seen, last_seen, last_changed)
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                        ON CONFLICT (kind, def_id) DO UPDATE SET
-                           release_date=excluded.release_date, name=excluded.name, cost=excluded.cost, power=excluded.power, text=excluded.text,
+                           release_date=excluded.release_date, card_type=excluded.card_type,
+                           collectible=excluded.collectible, category=excluded.category,
+                           name=excluded.name, cost=excluded.cost, power=excluded.power, text=excluded.text,
                            released=excluded.released, is_token=excluded.is_token, tags=excluded.tags,
                            status=excluded.status, confirmed_fields=excluded.confirmed_fields,
                            sources=excluded.sources, extra=excluded.extra,
@@ -209,7 +296,10 @@ class Store:
                     (d.kind, d.def_id, v.get("name"), v.get("cost"), v.get("power"), v.get("text"),
                      int(d.released), int(bool(d.extra.get("is_token"))), json.dumps(d.tags), d.status,
                      json.dumps(sorted(d.confirmed_fields)), json.dumps(sorted(d.sources)),
-                     json.dumps(d.extra, sort_keys=True), d.extra.get("release_date"), ts, ts, ts,
+                     json.dumps(d.extra, sort_keys=True), d.extra.get("release_date"),
+                     d.extra.get("card_type") if d.kind == "card" else None,
+                     None if d.extra.get("collectible") is None else int(d.extra["collectible"]),
+                     d.extra.get("category"), ts, ts, ts,
                      int(not d.missing_from), int(changed)),
                 )
                 patch = d.extra.get("patch")
@@ -224,6 +314,21 @@ class Store:
                             "INSERT INTO issues VALUES (?,?,?,?,?,?,?)",
                             (d.kind, d.def_id, f, kind_, json.dumps(vals), first, ts),
                         )
+
+            if graph is not None:
+                self._write_graph(graph)
+
+    def _write_graph(self, g: "Graph"):
+        for table in ("pool_refs", "pool_members", "pools", "card_links"):
+            self.db.execute(f"DELETE FROM {table}")
+        self.db.executemany("INSERT INTO card_links VALUES (?,?,?,?)",
+                            [(a, b, t, o) for (a, b, t), o in g.links.items()])
+        self.db.executemany("INSERT INTO pools VALUES (?,?,?,?)",
+                            [(p.pool_id, p.name, p.kind, p.description) for p in g.pools.values()])
+        self.db.executemany("INSERT INTO pool_members VALUES (?,?)",
+                            [(p.pool_id, m) for p in g.pools.values() for m in sorted(p.members)])
+        self.db.executemany("INSERT INTO pool_refs VALUES (?,?,?,?)",
+                            [(c, p, r, o) for (c, p, r), o in g.refs.items() if p in g.pools])
 
     def _hist(self, run_id, d, field, old, new, how, patch, sources, ts):
         self.db.execute(
