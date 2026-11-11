@@ -173,8 +173,8 @@ uses; `snap-assistant sync` reports any that are missing.
   triggers its On Reveal, but it doesn't count as **played**: it doesn't
   count for "per card played" discounts (The Grand Design) or "play N cards"
   Objectives (Stryfe) (verified: player, 2026-11-11).
-- Eson picks at random when you hold several created cards (verified:
-  player, 2026-11-11).
+- Both pick at random: Dragon Lord from any card in your hand, Eson from the
+  created cards in your hand (verified: player, 2026-11-11).
 - Can be repeated by effects (Wong: "Your On Reveal abilities here repeat";
   Odin repeats the On Reveals of your other cards at his location), copied, or
   prevented (Cosmo: "On Reveal abilities won't happen here").
