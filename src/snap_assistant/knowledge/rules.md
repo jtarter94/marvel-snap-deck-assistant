@@ -51,6 +51,18 @@ uses; `snap-assistant sync` reports any that are missing.
   over (but some cards reward or check unspent Energy).
 - "+1 Energy next turn" is a one-turn bonus; "+1 Max Energy" is permanent.
 
+## Cost vs cost
+`status: established` · `aliases: base cost, current cost, printed cost, x-Cost, even-costed, odd-costed, cost check` · `verified: player, 2026-11-11`
+
+- Card text distinguishes **Cost** (capital C) from **cost** (lowercase c).
+- **Cost** means the card's base Cost. Discounts don't change it, so a card
+  checking "5-Cost or more" (Chamber, Mordred's "higher-Cost", Excalibur's
+  "4-Cost or more") still sees Valentina's 6-Cost card after its −2, and still
+  sees The Grand Design as 6-Cost however cheap it has become.
+- **cost** means the Energy it currently takes to play the card, after
+  discounts such as Quinjet or Mother Askani's copy (e.g. Moon Knight's
+  "even-costed").
+
 ## Locations
 `status: established` · `aliases: location reveal, location effects, lanes`
 
@@ -247,6 +259,9 @@ uses; `snap-assistant sync` reports any that are missing.
   play, so an Objective can be partly or fully done before you play the card.
 - An Objective completes once per game (player's understanding; whether a
   revived or copied card can complete it again is unconfirmed).
+- When an Objective reward picks "the highest-Cost" card and several are tied,
+  the game picks one of them at random (e.g. Stryfe with two 6-Cost On Reveal
+  cards in hand; verified: player, 2026-11-11).
 
 ## Horde
 `status: established` · `aliases: zombie horde, horde +1, horde +2, horde +3, horde +4` · `verified: player, 2026-11-11`
@@ -373,6 +388,12 @@ uses; `snap-assistant sync` reports any that are missing.
 - "Copy its text" gives a card another card's abilities (Mystique copies the
   last card's Ongoing; Prodigy copies the card in front). Copying an On Reveal
   makes it happen as part of the copier's reveal.
+- Astral Projection doesn't let you choose: with several On Reveal cards in
+  hand, it copies one at random (verified: player, 2026-11-11).
+- A copied On Reveal happens where the copier was played: "here" means the
+  location Astral Projection was played at, even though the Skill is banished
+  (e.g. copying Arthur Pendragon pulls Excalibur to that location; verified:
+  player, 2026-11-11).
 - "Remove the text/abilities" blanks a card. A blanked Ongoing card stops
   applying; a blanked card in hand never does its ability.
 
