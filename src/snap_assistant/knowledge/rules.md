@@ -148,10 +148,10 @@ uses; `snap-assistant sync` reports any that are missing.
 ## On Reveal
 `status: established` · `aliases: on reveals, on-reveal, reveal ability`
 
-- Happens once, when the card is revealed after being **played**. Moving a
-  card, or a card entering play by other means (revived, resurrected,
-  summoned to a location by another card's effect), doesn't trigger it
-  unless the text says so.
+- Happens when the card reveals after being **played**, and also when it
+  comes back into play by being **revived, resurrected or regenerated**
+  (verified by the player; see Revive, Resurrect and Regenerate). Moving a
+  card doesn't trigger it.
 - Can be repeated by effects (Wong: "Your On Reveal abilities here repeat";
   Odin repeats the On Reveals of your other cards at his location), copied, or
   prevented (Cosmo: "On Reveal abilities won't happen here").
@@ -234,12 +234,15 @@ uses; `snap-assistant sync` reports any that are missing.
   arrive by moving.
 
 ## Objective
-`status: from-card-text` · `aliases: objective, objectives, horseman`
+`status: established` · `aliases: objective, objectives, horseman` · `verified: player, 2026-11-11`
 
 - A goal with a progress counter shown in brackets, e.g. Archangel Horseman of
   Death: "Objective: Your cards are destroyed 4 times — Resurrect one here
   with +5 Power. (0/4)". When the counter is complete the reward happens.
-- Assumption to verify: progress only counts while the card is in play.
+- Progress counts while the card is in your **hand or deck**, not only in
+  play, so an Objective can be partly or fully done before you play the card.
+- An Objective completes once per game (player's understanding; whether a
+  revived or copied card can complete it again is unconfirmed).
 
 ## Horde
 `status: from-card-text` · `aliases: zombie horde, horde +1, horde +2, horde +3, horde +4`
@@ -260,13 +263,15 @@ uses; `snap-assistant sync` reports any that are missing.
   Quickdraw at Game Start.
 
 ## Empowered
-`status: from-card-text` · `aliases: empower, empowered, when this is empowered`
+`status: established` · `aliases: empower, empowered, when this is empowered` · `verified: player, 2026-11-11`
 
 - A card is Empowered when an effect increases its Power. Cards trigger "When
   this is Empowered" whether in hand, deck or play when their text says so
   (Sebastian Shaw: "gain an additional +2 Power (if in hand, in deck, or in
   play)"; Venus adds +1 more when your cards in play are Empowered).
-- Assumption to verify: Power gained from Ongoing effects counts.
+- **Ongoing Power doesn't count.** Only effects that actually give Power
+  (On Reveals, End of Turn buffs, etc.) Empower a card; continuous bonuses
+  from Ongoing cards don't trigger "When Empowered".
 
 ## Frontline and Backline
 `status: from-card-text` · `aliases: frontline, backline, duo cards, doomsday`
@@ -285,11 +290,14 @@ uses; `snap-assistant sync` reports any that are missing.
   (Techno-Organic Virus: "Infect your other cards here (replace their text)").
 
 ## Judge
-`status: from-card-text` · `aliases: judge, worthy`
+`status: established` · `aliases: judge, worthy, jane foster` · `verified: player, 2026-11-11`
 
-- Card-specific term on Jane Foster Fractured Frontier: "Judge 4 other random
-  characters. +1 Power (if yours) or -1 Power (enemies)." Read the card text;
-  it isn't a general rule.
+- Only used by Jane Foster Fractured Frontier: "Judge 4 other random
+  characters. +1 Power (if yours) or -1 Power (enemies). Quickdraw: Judge
+  the worthy again."
+- Each judgement picks 4 random characters fresh and applies its +1/-1 to
+  each of them. Every repeat (her Quickdraw, Wong, Odin, a copy) picks a new
+  random set, so the same card can be judged more than once.
 
 # Common mechanics (not bolded keywords)
 
@@ -337,12 +345,17 @@ uses; `snap-assistant sync` reports any that are missing.
 - Every Skill is banished after it's played (see Skills).
 
 ## Revive, Resurrect and Regenerate
-`status: from-card-text` · `aliases: revive, resurrect, regenerate, return, comes back`
+`status: established` · `aliases: revive, resurrect, regenerate, return, comes back, revival` · `verified: player, 2026-11-11`
 
-- All return a card to play, usually to a location, without it being played,
-  so On Reveal doesn't happen. Revive and resurrect bring back cards that were
-  destroyed (and, where the text says, discarded). Regenerate is used for a
-  card returning itself (Wolverine, X-23).
+- All return a card to play, usually at a location. Revive and resurrect
+  bring back cards that were destroyed (and, where the text says, discarded);
+  regenerate is a card returning itself (Wolverine, X-23).
+- **The returning card's On Reveal happens.** Reviving, resurrecting or
+  regenerating an On Reveal card is a way to get its effect again (e.g.
+  Hela resurrecting discarded cards, Phoenix Force reviving a destroyed one).
+- Unconfirmed: whether a returned card's Activate or Objective is available
+  again. The player's understanding is that both are once per game, so treat
+  a used Activate or completed Objective as spent unless shown otherwise.
 
 ## Copy and remove text
 `status: established` · `aliases: copy, copies, copy text, remove text, remove abilities, silence, blank`

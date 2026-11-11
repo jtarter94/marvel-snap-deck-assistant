@@ -76,7 +76,7 @@
     {
       "id": "wolverine-discarded",
       "question": "Blade discards Wolverine from my hand. What happens?",
-      "expected": "Wolverine regenerates at a random location with +2 Power (5 Power), because his ability triggers when discarded or destroyed. Being put into play this way isn't playing him, so nothing else reveals.",
+      "expected": "Wolverine regenerates at a random location with +2 Power (5 Power), because his ability triggers when discarded or destroyed. He has no On Reveal, so nothing else happens.",
       "assumes": {
         "Blade": "Discard the rightmost card from your hand",
         "Wolverine": "When Discarded or Destroyed: Regenerate this with +2 Power at a random location"
@@ -235,6 +235,54 @@
           "power": 6
         }
       }
+    },
+    {
+      "id": "hela-on-reveals",
+      "question": "Hela resurrects a discarded Black Panther. Does Black Panther double its Power?",
+      "expected": "Yes. Resurrecting a card triggers its On Reveal, so Black Panther doubles its Power when it comes back.",
+      "assumes": {
+        "Hela": "resurrect a card you discarded",
+        "Black Panther": "Double this card's Power"
+      },
+      "rules": [
+        "Revive, Resurrect and Regenerate",
+        "On Reveal"
+      ]
+    },
+    {
+      "id": "empowered-ongoing",
+      "question": "Sebastian Shaw is at a location where my Ongoing card gives my cards +1 Power. Does Shaw get his extra +2?",
+      "expected": "No. Power from Ongoing effects doesn't Empower a card; only effects that actually give Power do.",
+      "assumes": {
+        "Sebastian Shaw": "When this is Empowered"
+      },
+      "rules": [
+        "Empowered",
+        "Ongoing"
+      ]
+    },
+    {
+      "id": "objective-in-hand",
+      "question": "Archangel Horseman of Death is still in my hand while 4 of my cards are destroyed. When I play him later, has his Objective progressed?",
+      "expected": "Yes. Objective progress counts while the card is in hand or deck, so it can already be complete when he's played.",
+      "assumes": {
+        "Archangel Horseman of Death": "Objective"
+      },
+      "rules": [
+        "Objective"
+      ]
+    },
+    {
+      "id": "jane-foster-rerolls",
+      "question": "Jane Foster Fractured Frontier reveals with her Quickdraw active. How many judgements happen, and can the same enemy card be hit twice?",
+      "expected": "Two judgements (the On Reveal, then Quickdraw's 'Judge the worthy again'). Each picks 4 random other characters fresh, so yes, the same card can be judged twice.",
+      "assumes": {
+        "Jane Foster Fractured Frontier": "Judge 4 other random characters"
+      },
+      "rules": [
+        "Judge",
+        "Quickdraw"
+      ]
     }
   ]
 }
