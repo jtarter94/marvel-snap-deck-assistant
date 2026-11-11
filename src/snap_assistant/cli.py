@@ -127,12 +127,13 @@ def cmd_show(args):
             print(f"  Cost {row['cost']}  Power {row['power']}")
         print(f"  {row['text'] or '(no ability)'}")
         extra = json.loads(row["extra"])
-        flags = [row["status"], "released" if row["released"] else "unreleased"]
+        flags = [row["status"], "released" if row["released"] else
+                 "created in game" if extra.get("created_by") else "unreleased"]
         if row["is_token"]:
             flags.append("token")
         if extra.get("card_type") not in (None, "Character"):
             flags.append(f"{extra['card_type']} (game mode)" if not extra.get("created_by") else extra["card_type"])
-        elif args.kind == "card" and extra.get("collectible") is False:
+        elif args.kind == "card" and extra.get("collectible") is False and not extra.get("created_by"):
             flags.append("not collectible")
         print(f"  Status: {', '.join(flags)};  sources: {', '.join(json.loads(row['sources']))}")
         if args.kind == "card":
