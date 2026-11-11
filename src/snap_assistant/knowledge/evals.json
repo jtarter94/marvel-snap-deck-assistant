@@ -174,6 +174,46 @@
         "Skills",
         "Banish"
       ]
+    },
+    {
+      "id": "symbiote-galactus",
+      "question": "Symbiote Spider-Man and Galactus are my only two cards at a location and I Activate Symbiote Spider-Man. What happens?",
+      "expected": "Galactus is the lowest-Cost card there besides Symbiote Spider-Man, so it merges into Symbiote Spider-Man, which copies Galactus's text as if it just revealed. The On Reveal happens again: if you're winning that location and Symbiote Spider-Man is now your only card there (it is, after the merge), all other locations are destroyed.",
+      "assumes": {
+        "Symbiote Spider-Man": "Copy its text like it just revealed",
+        "Galactus": "destroy all other locations"
+      },
+      "rules": [
+        "Merge",
+        "On Reveal",
+        "Activate"
+      ]
+    },
+    {
+      "id": "symbiote-onslaught",
+      "question": "Onslaught merges into Symbiote Spider-Man. Do my other Ongoing effects at that location still apply an extra time?",
+      "expected": "Yes. Symbiote Spider-Man copies the merged card's text, so it keeps Onslaught's Ongoing for as long as it's in play with that text.",
+      "assumes": {
+        "Symbiote Spider-Man": "Copy its text",
+        "Onslaught": "Your other Ongoing effects here apply an additional time"
+      },
+      "rules": [
+        "Merge",
+        "Ongoing"
+      ]
+    },
+    {
+      "id": "symbiote-used-activate",
+      "question": "I already used a card's Activate, then Symbiote Spider-Man merges it in. Can I use that Activate again?",
+      "expected": "No. Copying the text keeps its state: an already-used Activate (or a completed Objective) stays used/completed; the merge doesn't reset it.",
+      "assumes": {
+        "Symbiote Spider-Man": "Copy its text"
+      },
+      "rules": [
+        "Merge",
+        "Activate",
+        "Objective"
+      ]
     }
   ]
 }

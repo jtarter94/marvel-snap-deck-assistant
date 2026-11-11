@@ -307,14 +307,25 @@ uses; `snap-assistant sync` reports any that are missing.
 - Takes Power from a card and adds the same amount to the stealing card.
 
 ## Merge
-`status: from-card-text` · `aliases: merge, merged, merging`
+`status: from-card-text` · `aliases: merge, merged, merging, symbiote spider-man`
 
 - One card is merged into another: the merged card leaves play and the card it
   merges into gains its Power (Hulkbuster: "Merge this into one of your cards
   here"). Some cards care about merging (Strange Supreme: "Gains +2 Power from
   merging"; Peni Parker gives +1 Energy when it merges).
-- Assumption to verify: Cost and abilities are not combined unless the text
-  says so.
+- Abilities are not combined unless the card's text says so. Symbiote
+  Spider-Man's does ("Merge your lowest-Cost card here into this. Copy its
+  text like it just revealed"), so it takes on the merged card's text
+  (verified by the player, 2026-11-11):
+  - **On Reveal** happens again, as if it just revealed (a merged Galactus
+    re-checks its condition and can destroy the other locations again).
+  - **Ongoing** is kept and keeps applying (a merged Onslaught keeps making
+    your other Ongoing effects there apply an additional time).
+  - **Objective / Activate** keep their state: a completed Objective or an
+    already-used Activate stays completed/used. The merge doesn't reset it.
+  - It picks the *lowest-Cost* card at its location, so setting up a specific
+    target (e.g. Galactus) means having nothing cheaper there.
+- Assumption to verify: Cost is not combined when cards merge.
 
 ## Banish
 `status: from-card-text` · `aliases: banish, banished`
