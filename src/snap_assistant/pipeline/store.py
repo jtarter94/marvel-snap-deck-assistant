@@ -82,6 +82,20 @@ CREATE TABLE IF NOT EXISTS pool_refs (
     PRIMARY KEY (def_id, pool_id, relation)
 );
 
+-- The user's own data: never rebuilt by sync.
+CREATE TABLE IF NOT EXISTS collection (
+    def_id TEXT PRIMARY KEY,
+    owned INTEGER NOT NULL,
+    updated TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS decks (
+    name TEXT PRIMARY KEY COLLATE NOCASE,
+    cards TEXT NOT NULL,          -- JSON list of def_ids
+    notes TEXT,
+    created TEXT NOT NULL,
+    updated TEXT NOT NULL
+);
+
 -- Open issues as of the latest run (conflicts and held changes); replaced each run.
 CREATE TABLE IF NOT EXISTS issues (
     kind TEXT NOT NULL,
@@ -234,6 +248,41 @@ class Store:
         return list(self.db.execute(
             "SELECT p.* FROM pool_members m JOIN pools p USING (pool_id) WHERE m.def_id = ? ORDER BY p.name",
             (def_id,)))
+
+    # --- collection & decks (user data) ------------------------------------
+
+    def set_owned(self, def_ids: list[str], owned: bool):
+        ts = now()
+        with self.db:
+            self.db.executemany(
+                "INSERT INTO collection VALUES (?,?,?) ON CONFLICT (def_id) DO UPDATE SET owned=excluded.owned, updated=excluded.updated",
+                [(d, int(owned), ts) for d in def_ids])
+
+    def owned(self) -> dict[str, bool]:
+        return {r["def_id"]: bool(r["owned"]) for r in self.db.execute("SELECT * FROM collection")}
+
+    def save_deck(self, name: str, def_ids: list[str], notes: str | None = None):
+        ts = now()
+        with self.db:
+            self.db.execute(
+                "INSERT INTO decks VALUES (?,?,?,?,?) ON CONFLICT (name) DO UPDATE SET"
+                " cards=excluded.cards, notes=COALESCE(excluded.notes, decks.notes), updated=excluded.updated",
+                (name, json.dumps(def_ids), notes, ts, ts))
+
+    def decks(self):
+        return list(self.db.execute("SELECT * FROM decks ORDER BY updated DESC"))
+
+    def deck(self, name: str):
+        return self.db.execute("SELECT * FROM decks WHERE name = ?", (name,)).fetchone()
+
+    def delete_deck(self, name: str) -> bool:
+        with self.db:
+            return self.db.execute("DELETE FROM decks WHERE name = ?", (name,)).rowcount > 0
+
+    def recent_history(self, since: str):
+        return list(self.db.execute(
+            "SELECT h.*, e.name FROM history h LEFT JOIN entities e USING (kind, def_id)"
+            " WHERE h.at >= ? AND h.how != 'new' ORDER BY h.id DESC", (since,)))
 
     def history(self, kind: str, def_id: str):
         return list(self.db.execute(

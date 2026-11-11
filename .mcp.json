@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "snap-assistant": {
+      "command": ".venv/bin/snap-assistant-mcp",
+      "args": []
+    }
+  }
+}

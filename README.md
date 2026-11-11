@@ -18,9 +18,43 @@ snap-assistant cards --tag move
 snap-assistant show knull               # card, release date, created cards, history
 snap-assistant cards --newest 5
 snap-assistant pools                    # card pools (All Skills, teams, Incantations)
+snap-assistant rules "reveal order"     # rules reference
+snap-assistant own Knull Death          # record cards you own
 snap-assistant locations --search energy
 pytest
 ```
+
+## Using it with Claude (MCP server)
+
+`.mcp.json` registers a local MCP server, so a Claude Code session opened in
+this folder can consult the database while you brainstorm decks (approve the
+`snap-assistant` server when asked). It needs the venv set up with
+`uv pip install -e ".[dev]"` (or `".[mcp]"`) and a synced database.
+
+Tools: `search_cards`, `get_card(s)`, `random_cards`, `search_locations`,
+`get_location`, `list_pools`, `get_pool`, `recent_changes`, `rules`,
+`analyze_deck`, `suggest_cards`, `save_deck` / `list_decks` / `get_deck`,
+`set_owned`, `collection_summary`. The server tells Claude to favour
+creative, unconventional ideas, to ground claims in current card text and
+the rules reference, and to point out cards you don't own.
+
+## Rules reference
+
+`src/snap_assistant/knowledge/rules.md` explains core rules, every keyword
+the card data uses, common mechanics and interaction principles. Each
+section is marked `established` or `from-card-text` (inferred from how cards
+use a term; verify in-game, then change the status and add
+`verified: <patch>`). Sync reports any new keyword without a section.
+
+`knowledge/evals.json` holds rules questions with known answers. Run
+`snap-assistant evals` after a patch to see which questions' card-text
+assumptions changed, and ask Claude the questions to check its reasoning.
+
+## Your collection
+
+`snap-assistant own Knull "Black Panther"` (or `--remove`) records cards you
+own; `snap-assistant collection` summarises what's missing by series. Ideas
+still use every card; unowned ones are flagged so you can plan Token spends.
 
 ## Deck files
 
@@ -127,6 +161,9 @@ src/snap_assistant/
   cards.py     CardPool (JSON or database loading, lookup, tag filter)
   analysis.py  curve/archetype analysis, suggestions
   cli.py       `snap-assistant` command
+  assistant.py queries shared by the CLI and MCP server
+  mcp_server.py  MCP server for Claude
+  knowledge/   rules reference (rules.md) and eval questions (evals.json)
   pipeline/
     sources.py    source adapters (fetch + parse to records)
     text.py       text normalisation so sources compare fairly

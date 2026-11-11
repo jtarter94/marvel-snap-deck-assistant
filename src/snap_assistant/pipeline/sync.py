@@ -40,6 +40,7 @@ class SyncResult:
     report: str
     game_patch: str | None
     new_issue_count: int = 0
+    uncovered_keywords: dict[str, list[str]] = field(default_factory=dict)
 
     @property
     def noteworthy(self) -> bool:
@@ -61,6 +62,18 @@ def check_sanity(records: dict[str, list[Record]], previous: dict[str, int] | No
     if cards and complete / len(cards) < rules.min_complete:
         return f"only {complete}/{len(cards)} cards have name, cost and power"
     return None
+
+
+def uncovered_keywords(decisions: list[Decision]) -> dict[str, list[str]]:
+    """Keywords in card/location text that the rules reference doesn't explain yet."""
+    from ..knowledge import covers
+
+    missing: dict[str, list[str]] = {}
+    for d in decisions:
+        for k in d.extra.get("keywords") or []:
+            if not covers(k):
+                missing.setdefault(k, []).append(d.name)
+    return missing
 
 
 def _version_key(v: str):
@@ -129,7 +142,8 @@ def sync(
             _summary(decisions, game_patch),
         )
 
-    result = SyncResult(run_id, status, results, decisions, "", game_patch, new_issues)
+    result = SyncResult(run_id, status, results, decisions, "", game_patch, new_issues,
+                        uncovered_keywords=uncovered_keywords(decisions))
     result.report = render_report(result)
     return result
 
@@ -203,6 +217,12 @@ def render_report(r: SyncResult, list_limit: int = 30) -> str:
         for f, vals in d.held.items()])
     section("Overrides the sources now agree with (safe to remove)", stale, lambda d: [
         f"- {label(d)}: {', '.join(d.stale_overrides)}"])
+    if r.uncovered_keywords:
+        out.extend(["", f"## Keywords missing from the rules reference ({len(r.uncovered_keywords)})",
+                    "Add a section to src/snap_assistant/knowledge/rules.md:"])
+        for k, names in sorted(r.uncovered_keywords.items()):
+            out.append(f"- **{k}** — used by {', '.join(sorted(set(names))[:5])}"
+                       + (f" and {len(set(names)) - 5} more" if len(set(names)) > 5 else ""))
     if not (new or changed or conflicts or held or stale):
         out += ["", "No changes."]
     return "\n".join(out) + "\n"

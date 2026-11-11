@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import gzip
 import json
+import re
 import time
 import urllib.request
 from datetime import datetime, timezone
@@ -94,6 +95,25 @@ def http_get_json(url: str, timeout: float = 30, retries: int = 3) -> object:
     raise RuntimeError(f"GET {url} failed: {last}")
 
 
+_BOLD = re.compile(r"<b>([^<]+)</b>")
+
+
+def bold_keywords(raw_text: str | None) -> list[str]:
+    """The game's own keywords, which marvelsnap.pro marks in bold.
+
+    "On Reveal and When Destroyed" -> both; "Horde +3" -> "Horde".
+    """
+    out = []
+    for m in _BOLD.findall(raw_text or ""):
+        k = clean_name(m).strip(" :!|")
+        parts = [k] if k == "When Discarded or Destroyed" else re.split(r"\s+and\s+", k)
+        for part in parts:
+            part = re.sub(r"\s*[+-]\d+$", "", part).strip(" :!|")
+            if part and part not in out:
+                out.append(part)
+    return out
+
+
 # --- marvelsnap.pro --------------------------------------------------------
 
 def _pro_cards(raw) -> list[Record]:
@@ -120,6 +140,7 @@ def _pro_cards(raw) -> list[Record]:
                 # collection series and can't go in a normal deck.
                 "collectible": bool(series),
                 "category": clean_name(v.get("category")) or None,
+                "keywords": bold_keywords(v.get("description")),
                 # When the card entered its *current* pool (Season Pass/Series).
                 # Later than the true release for cards that changed Series.
                 "pool_date": _earliest(_date(x.get("StartDate"))
@@ -143,6 +164,7 @@ def _pro_locations(raw) -> list[Record]:
             released=v.get("released") == "1",
             extra={"patch": v.get("wasChangedIn") or v.get("wasAddedIn") or None,
                    "rarity": v.get("rarity") or None,
+                   "keywords": bold_keywords(v.get("description")),
                    "pool_date": _earliest(_date(x.get("date")) for x in v.get("dates") or []
                                           if isinstance(x, dict) and x.get("type") == "Base")},
         )
