@@ -112,6 +112,10 @@ uses; `snap-assistant sync` reports any that are missing.
 - "Original" or "base" Power is the card's printed Power; Shadow King-style
   effects reset to it, removing permanent and continuous changes.
 - Power gained in hand or deck stays with the card when it's played.
+- **Inverting** Power (The Inversion) multiplies it by −1; the game shows it
+  as "x-1", not as a Power change. A card inverted to negative Power is **not**
+  "afflicted" (see Afflict), and The Inversion's "card(s) here" includes enemy
+  cards (verified: player, 2026-11-11).
 
 ## Skills
 `status: established` · `aliases: skill, skills, skill card, spell, banished after use` · `verified: player, 2026-11-11`
@@ -308,6 +312,12 @@ uses; `snap-assistant sync` reports any that are missing.
   -1 Power"). Afflicting your own cards is a deliberate strategy with cards
   that reward negative Power (Ajax, Diamondback).
 - Luke Cage prevents your front-row cards' Power from being reduced.
+- Inverting isn't afflicting: a card that's negative only because its Power
+  was inverted ("x-1", e.g. The Inversion) doesn't count as "afflicted with
+  negative Power" for Ikari, Ajax or Diamondback (verified: player, 2026-11-11).
+- Afflictions put on cards in hand (e.g. Scorpion, Selene) stay on the card
+  when it's played, so it's still afflicted on the board and counts for Ikari,
+  Ajax and Diamondback (verified: player, 2026-11-11).
 
 ## Steal
 `status: established` · `aliases: steal, stealing, stolen power`
